@@ -92,7 +92,8 @@ function App() {
         <Route path="/raw-materials" element={<RawMaterials />} />
 
 
-        <Route path="/produced-resin" element={<ProducedResins />} />
+        {/* 📦 Produced Resins List */}
+        <Route path="/produced-resins" element={<ProducedResins />} />
       </Routes>
     </Router>
   );
