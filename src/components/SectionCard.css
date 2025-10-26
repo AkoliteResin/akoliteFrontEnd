@@ -1,0 +1,41 @@
+.section-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+
+.section-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+
+.section-card h2 {
+  color: #2b3a55;
+}
+
+
+.section-card p {
+  color: #555;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+}
+
+
+.section-card button {
+  background: #2b3a55;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+
+.section-card button:hover {
+  background: #4f5d75;
+}
