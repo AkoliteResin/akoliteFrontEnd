@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 import "./ResinCalculator.css";
 
 
-function ResinCalculator({ onProduced }) {
-  const [resinType, setResinType] = useState("");
-  const [litres, setLitres] = useState("");
+function ResinCalculator({ onProduced, showProduce = true }) {
+  const location = useLocation();
+  const [resinType, setResinType] = useState(location.state?.resinType || "");
+  const [litres, setLitres] = useState(location.state?.litres || "");
+  const [unit, setUnit] = useState(location.state?.unit || "litres");
+  const orderId = location.state?.orderId || null;
   const [result, setResult] = useState(null);
   const [resinData, setResinData] = useState([]);
+  const isLocked = Boolean(orderId); // lock inputs when coming from Orders
+  const [producing, setProducing] = useState(false);
+  const [alreadyProduced, setAlreadyProduced] = useState(false);
 
 
   // Fetch resin definitions (or use fallback static data)
@@ -27,6 +34,22 @@ function ResinCalculator({ onProduced }) {
     };
     fetchResinData();
   }, []);
+
+  // If opened from an order, check if it's already produced and disable Produce
+  useEffect(() => {
+    const checkAlreadyProduced = async () => {
+      if (!orderId) return;
+      try {
+        const res = await axios.get("http://localhost:5000/api/produced-resins");
+        const items = res.data?.items || [];
+        const exists = items.some(i => i.fromOrderId && i.fromOrderId === orderId);
+        if (exists) setAlreadyProduced(true);
+      } catch (err) {
+        console.warn('Failed to check existing production for order', err);
+      }
+    };
+    checkAlreadyProduced();
+  }, [orderId]);
 
 
   // Calculate without modifying stock
@@ -56,13 +79,14 @@ function ResinCalculator({ onProduced }) {
   const handleProduce = async () => {
     if (!resinType || !litres) return alert("Please fill all fields.");
 
-
     try {
+      setProducing(true);
       const res = await axios.post("http://localhost:5000/api/produce-resin", {
         resinType,
         litres: Number(litres),
+        unit,
+        orderId,
       });
-
 
       setResult(
         res.data.requiredMaterials.map((r) => ({
@@ -72,12 +96,21 @@ function ResinCalculator({ onProduced }) {
         }))
       );
 
-
       onProduced?.(); // refresh raw materials table
-      alert("✅ Resin produced successfully!");
+      
+      if (orderId) {
+        setAlreadyProduced(true); // disable produce for this order
+        alert("✅ Resin produced successfully!\nCheck Produced Resins → Active Orders to proceed/complete/dispatch.");
+      } else {
+        alert("✅ Resin produced successfully!\nCheck Produced Resins → Active Orders.");
+      }
     } catch (err) {
-      alert(err.response?.data?.message || "Error producing resin");
+      const errorMsg = err.response?.data?.message || "Error producing resin";
+      alert(errorMsg);
       console.error(err.response?.data || err);
+    }
+    finally {
+      setProducing(false);
     }
   };
 
@@ -89,20 +122,46 @@ function ResinCalculator({ onProduced }) {
 
       <div className="form">
         <label>Resin Type:</label>
-        <select value={resinType} onChange={(e) => setResinType(e.target.value)}>
+        <select
+          value={resinType}
+          onChange={(e) => setResinType(e.target.value)}
+          disabled={isLocked}
+          title={isLocked ? "Locked for this order" : undefined}
+        >
           <option value="">Select</option>
           {resinData.map((r) => (
             <option key={r.name} value={r.name}>{r.name}</option>
           ))}
         </select>
 
+        <label>Quantity to Produce ({unit}):</label>
+        <input
+          type="number"
+          value={litres}
+          onChange={(e) => setLitres(e.target.value)}
+          disabled={isLocked}
+          title={isLocked ? "Locked for this order" : undefined}
+        />
 
-        <label>Litres to Produce:</label>
-        <input type="number" value={litres} onChange={(e) => setLitres(e.target.value)} />
+        <label>Unit:</label>
+        <select
+          value={unit}
+          onChange={(e) => setUnit(e.target.value)}
+          disabled={isLocked}
+          title={isLocked ? "Locked for this order" : undefined}
+        >
+          <option value="litres">Litres</option>
+          <option value="kgs">Kgs</option>
+          <option value="pounds">Pounds</option>
+        </select>
 
 
         <button onClick={handleCalculate}>Calculate</button>
-        <button onClick={handleProduce}>Produce</button>
+        {showProduce && (
+          <button onClick={handleProduce} disabled={producing || (isLocked && alreadyProduced)}>
+            {producing ? 'Producing…' : (isLocked && alreadyProduced ? 'Already Produced' : 'Produce')}
+          </button>
+        )}
       </div>
 
 
@@ -114,7 +173,7 @@ function ResinCalculator({ onProduced }) {
               <tr>
                 <th>Material</th>
                 <th>Percentage (%)</th>
-                <th>Litres</th>
+                <th>{unit.charAt(0).toUpperCase() + unit.slice(1)}</th>
               </tr>
             </thead>
             <tbody>

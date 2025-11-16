@@ -6,6 +6,14 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import ResinCalculator from "./pages/ResinCalculator";
 import RawMaterials from "./pages/RawMaterials";
 import ProducedResins from "./pages/ProducedResins";
+import OrderForFuture from "./pages/OrderForFuture";
+import AllOrders from "./pages/AllOrders";
+import SellersDetails from "./pages/SellersDetails";
+import Billing from "./pages/Billing";
+import BillingHistory from "./pages/BillingHistory";
+import DaySummary from "./pages/DaySummary";
+import Expenses from "./pages/Expenses";
+import LocationReport from "./pages/LocationReport";
 import "./App.css";
 
 
@@ -20,15 +28,16 @@ function App() {
       description: "View and manage raw material stock.",
       link: "/raw-materials",
     },
-    {
-      title: "Resin Production",
-      description: "Track resin manufacturing process.",
-      link: "/resin-production",
-    },
+    // {
+    //   title: "Resin Production",
+    //   description: "Track resin manufacturing process.",
+    //   link: "/resin-production",
+    // },
     {
       title: "Sellers details",
       description:
         "Track the seller/client that gives the order + the products in the godown.",
+      link: "/sellers-details",
     },
     {
       title: "Products Produced",
@@ -42,14 +51,37 @@ function App() {
     {
       title: "Orders for the Future",
       description: "Plan and manage upcoming resin orders.",
+      link: "/future-orders",
+    },
+    {
+      title: "All Orders",
+      description: "See totals by resin and client.",
+      link: "/all-orders",
     },
     {
       title: "Billing",
       description: "View invoices and payment records.",
+      link: "/billing",
     },
     {
-      title: "Day’s Summary",
+      title: "Billing History",
+      description: "View all past billing records and invoices.",
+      link: "/billing-history",
+    },
+    {
+      title: "Day's Summary",
       description: "Get daily insights on production and sales.",
+      link: "/day-summary",
+    },
+    {
+      title: "Daily Expenses",
+      description: "Track HR, Labour, and Employee expenses.",
+      link: "/expenses",
+    },
+    {
+      title: "Location Report",
+      description: "View orders by district and state.",
+      link: "/location-report",
     },
   ];
 
@@ -94,6 +126,26 @@ function App() {
 
         {/* 📦 Produced Resins List */}
         <Route path="/produced-resins" element={<ProducedResins />} />
+
+  {/* 📅 Orders for Future */}
+        <Route path="/future-orders" element={<OrderForFuture />} />
+
+  {/* 📚 All Orders Aggregation */}
+  <Route path="/all-orders" element={<AllOrders />} />
+
+  {/* 👥 Sellers/Clients Details */}
+  <Route path="/sellers-details" element={<SellersDetails />} />
+
+  {/* 🧾 Billing */}
+  <Route path="/billing" element={<Billing />} />
+  {/* 📜 Billing History */}
+  <Route path="/billing-history" element={<BillingHistory />} />
+  {/* 📊 Day's Summary */}
+  <Route path="/day-summary" element={<DaySummary />} />
+  {/* 💰 Daily Expenses */}
+  <Route path="/expenses" element={<Expenses />} />
+  {/* 📍 Location Report */}
+  <Route path="/location-report" element={<LocationReport />} />
       </Routes>
     </Router>
   );

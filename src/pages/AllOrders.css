@@ -1,0 +1,241 @@
+.all-orders-container {
+  padding: 30px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.all-orders-container h2 {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.section-container {
+  margin-bottom: 40px;
+}
+
+.section-title {
+  font-size: 1.5em;
+  color: #2c3e50;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid #e3f2fd;
+}
+
+.godown-section .section-title {
+  border-bottom-color: #fff9e6;
+}
+
+.accordion .accordion-item {
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.accordion-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border: none;
+  background: linear-gradient(90deg, #e3f2fd 0%, #bbdefb 100%);
+  cursor: pointer;
+}
+
+.resin-title {
+  font-weight: 700;
+  color: #34495e;
+}
+
+.resin-total .unit-chip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 6px 10px;
+  background: #fff;
+  border: 1px solid #dfe6e9;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.accordion-body {
+  padding: 16px 18px 22px;
+}
+
+.clients-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.clients-table th, .clients-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.clients-table th {
+  text-align: left;
+  color: #2c3e50;
+}
+
+.unit-chip {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 4px 8px;
+  background: #f1f2f6;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.empty-state {
+  text-align: center;
+  color: #666;
+}
+
+.error {
+  color: #c0392b;
+  margin-bottom: 12px;
+}
+
+/* Godown Inventory Styles */
+.godown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  gap: 20px;
+}
+
+.godown-card {
+  background: linear-gradient(135deg, #fffbea 0%, #fff4cc 100%);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-left: 5px solid #f39c12;
+}
+
+.godown-header {
+  margin-bottom: 15px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f39c12;
+}
+
+.godown-header h4 {
+  margin: 0 0 8px 0;
+  color: #7d6608;
+  font-size: 1.2em;
+}
+
+.godown-totals {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.total-chip {
+  display: inline-block;
+  padding: 6px 12px;
+  background: #fff;
+  border: 2px solid #f39c12;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #7d6608;
+}
+
+.godown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.godown-table th {
+  text-align: left;
+  padding: 8px;
+  background: rgba(243, 156, 18, 0.2);
+  color: #7d6608;
+  font-weight: 600;
+  border-bottom: 2px solid #f39c12;
+}
+
+.godown-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #f9e79f;
+}
+
+.godown-table tr:last-child td {
+  border-bottom: none;
+}
+
+.godown-table small {
+  color: #999;
+  font-size: 11px;
+}
+
+.split-badge {
+  background: #3498db;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.direct-badge {
+  background: #95a5a6;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Pagination Styles */
+.pagination-info {
+  text-align: right;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+  font-style: italic;
+}
+
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 2px solid #f9e79f;
+}
+
+.page-btn {
+  background: #f39c12;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #e67e22;
+  transform: translateY(-1px);
+}
+
+.page-btn:disabled {
+  background: #ddd;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.page-indicator {
+  font-weight: 600;
+  color: #7d6608;
+}
+
+@media (max-width: 768px) {
+  .godown-grid {
+    grid-template-columns: 1fr;
+  }
+}
