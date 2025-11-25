@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import ResinCalculator from "./ResinCalculator";
-import "./RawMaterials.css";
-
+import {
+  Container, Typography, Paper, Grid, Select, MenuItem, FormControl, InputLabel, TextField, Button,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Box, Fab, Modal,
+  IconButton, Snackbar, Alert
+} from "@mui/material";
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Close as CloseIcon } from "@mui/icons-material";
+import ResinCalculator from "./ResinCalculator"; // Assuming this is also being updated or is compatible
 
 function RawMaterials() {
   const [materials, setMaterials] = useState([]);
@@ -10,14 +14,11 @@ function RawMaterials() {
   const [addQuantity, setAddQuantity] = useState("");
   const [modifyQuantity, setModifyQuantity] = useState("");
   const [showResinModal, setShowResinModal] = useState(false);
-  const [newResin, setNewResin] = useState({
-    name: "",
-    rawMaterials: []
-  });
+  const [newResin, setNewResin] = useState({ name: "", rawMaterials: [{ name: "", percentage: "" }] });
   const [availableRawMaterials, setAvailableRawMaterials] = useState([]);
   const [showAddRawMaterialInput, setShowAddRawMaterialInput] = useState(false);
   const [newRawMaterialName, setNewRawMaterialName] = useState("");
-
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const fetchMaterials = async () => {
     try {
@@ -26,17 +27,16 @@ function RawMaterials() {
       setAvailableRawMaterials(res.data.map(m => m.name));
     } catch (err) {
       console.error(err);
+      setSnackbar({ open: true, message: 'Failed to fetch raw materials.', severity: 'error' });
     }
   };
-
 
   useEffect(() => {
     fetchMaterials();
   }, []);
 
-
   const handleAdd = async () => {
-    if (!selectedMaterial || !addQuantity) return alert("Select material & quantity");
+    if (!selectedMaterial || !addQuantity) return setSnackbar({ open: true, message: 'Please select a material and enter a quantity to add.', severity: 'warning' });
     try {
       await axios.post("http://localhost:5000/api/raw-materials/add", {
         name: selectedMaterial,
@@ -44,15 +44,15 @@ function RawMaterials() {
       });
       setAddQuantity("");
       fetchMaterials();
-      alert("✅ Quantity added successfully!");
+      setSnackbar({ open: true, message: 'Quantity added successfully!', severity: 'success' });
     } catch (err) {
       console.error(err);
+      setSnackbar({ open: true, message: 'Failed to add stock.', severity: 'error' });
     }
   };
 
-
   const handleModify = async () => {
-    if (!selectedMaterial || !modifyQuantity) return alert("Select material & new quantity");
+    if (!selectedMaterial || !modifyQuantity) return setSnackbar({ open: true, message: 'Please select a material and enter the new total quantity.', severity: 'warning' });
     try {
       await axios.put("http://localhost:5000/api/raw-materials/modify", {
         name: selectedMaterial,
@@ -60,20 +60,21 @@ function RawMaterials() {
       });
       setModifyQuantity("");
       fetchMaterials();
-      alert("✅ Quantity modified successfully!");
+      setSnackbar({ open: true, message: 'Quantity modified successfully!', severity: 'success' });
     } catch (err) {
       console.error(err);
+      setSnackbar({ open: true, message: 'Failed to modify quantity.', severity: 'error' });
     }
   };
 
-  const handleAddRawMaterial = () => {
+  const handleAddRawMaterialToResin = () => {
     setNewResin(prev => ({
       ...prev,
       rawMaterials: [...prev.rawMaterials, { name: "", percentage: "" }]
     }));
   };
 
-  const handleRemoveRawMaterial = (index) => {
+  const handleRemoveRawMaterialFromResin = (index) => {
     setNewResin(prev => ({
       ...prev,
       rawMaterials: prev.rawMaterials.filter((_, i) => i !== index)
@@ -83,289 +84,201 @@ function RawMaterials() {
   const handleRawMaterialChange = (index, field, value) => {
     setNewResin(prev => ({
       ...prev,
-      rawMaterials: prev.rawMaterials.map((rm, i) => 
+      rawMaterials: prev.rawMaterials.map((rm, i) =>
         i === index ? { ...rm, [field]: value } : rm
       )
     }));
   };
 
   const handleSaveResin = async () => {
-    if (!newResin.name.trim()) {
-      alert("Please enter a resin name");
-      return;
-    }
-    if (newResin.rawMaterials.length === 0) {
-      alert("Please add at least one raw material");
-      return;
-    }
-    
-    // Validate all raw materials have name and percentage
-    const invalid = newResin.rawMaterials.some(rm => !rm.name || !rm.percentage || Number(rm.percentage) <= 0);
-    if (invalid) {
-      alert("Please fill in all raw material names and percentages");
-      return;
-    }
+    if (!newResin.name.trim()) return setSnackbar({ open: true, message: 'Please enter a resin name.', severity: 'warning' });
+    if (newResin.rawMaterials.length === 0) return setSnackbar({ open: true, message: 'Please add at least one raw material.', severity: 'warning' });
 
-    // Calculate total percentage
+    const invalid = newResin.rawMaterials.some(rm => !rm.name || !rm.percentage || Number(rm.percentage) <= 0);
+    if (invalid) return setSnackbar({ open: true, message: 'Please fill in all raw material names and percentages correctly.', severity: 'warning' });
+
     const totalPercentage = newResin.rawMaterials.reduce((sum, rm) => sum + Number(rm.percentage), 0);
-    if (Math.abs(totalPercentage - 100) > 0.01) {
-      alert(`Total percentage must equal 100%. Current total: ${totalPercentage.toFixed(2)}%`);
-      return;
-    }
+    if (Math.abs(totalPercentage - 100) > 0.01) return setSnackbar({ open: true, message: `Total percentage must be 100%. Current: ${totalPercentage.toFixed(2)}%`, severity: 'error' });
 
     console.log("Saving resin configuration:", newResin);
-    alert("✅ Resin configuration saved! (Note: This is a placeholder - backend implementation needed)");
-    
-    // Reset and close modal
-    setNewResin({ name: "", rawMaterials: [] });
-    setShowResinModal(false);
+    setSnackbar({ open: true, message: 'Resin configuration saved! (Backend needed)', severity: 'info' });
+    handleCloseModal();
   };
 
   const handleCloseModal = () => {
     setShowResinModal(false);
-    setNewResin({ name: "", rawMaterials: [] });
+    setNewResin({ name: "", rawMaterials: [{ name: "", percentage: "" }] });
     setShowAddRawMaterialInput(false);
     setNewRawMaterialName("");
   };
 
-  const handleAddNewRawMaterial = () => {
-    if (!newRawMaterialName.trim()) {
-      alert("Please enter a raw material name");
-      return;
-    }
-    
-    // Check if already exists
-    if (availableRawMaterials.includes(newRawMaterialName.trim())) {
-      alert("This raw material already exists");
-      return;
-    }
+  const handleAddNewRawMaterialToList = () => {
+    if (!newRawMaterialName.trim()) return setSnackbar({ open: true, message: 'Please enter a raw material name.', severity: 'warning' });
+    if (availableRawMaterials.includes(newRawMaterialName.trim())) return setSnackbar({ open: true, message: 'This raw material already exists.', severity: 'warning' });
 
     setAvailableRawMaterials([...availableRawMaterials, newRawMaterialName.trim()]);
     setNewRawMaterialName("");
     setShowAddRawMaterialInput(false);
-    alert("✅ Raw material added to the list!");
+    setSnackbar({ open: true, message: 'Raw material added to the list!', severity: 'success' });
   };
 
+  const getQuantityChipColor = (quantity) => {
+    if (quantity < 100) return "error";
+    if (quantity < 500) return "warning";
+    return "success";
+  };
+
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') return;
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  const modalStyle = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: '90%',
+    maxWidth: 700,
+    bgcolor: 'background.paper',
+    boxShadow: 24,
+    p: 0,
+    borderRadius: 2,
+    maxHeight: '90vh',
+    display: 'flex',
+    flexDirection: 'column'
+  };
 
   return (
-    <div className="raw-materials-container">
-      <h2>🧱 Raw Materials Management</h2>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        🧱 Raw Materials Management
+      </Typography>
 
-      <div className="controls-card">
-        <h3>📊 Update Inventory</h3>
-        <div className="controls-grid">
-          <div className="form-group select-material">
-            <label>Select Material <span className="required">*</span></label>
-            <select value={selectedMaterial} onChange={(e) => setSelectedMaterial(e.target.value)}>
-              <option value="">-- Choose a material --</option>
+      <Paper sx={{ p: 3, mb: 4 }}>
+        <Typography variant="h5" gutterBottom>📊 Update Inventory</Typography>
+        <Grid container spacing={3} alignItems="flex-end">
+          <Grid item xs={12}>
+            <FormControl fullWidth>
+              <InputLabel>Select Material *</InputLabel>
+              <Select value={selectedMaterial} label="Select Material *" onChange={(e) => setSelectedMaterial(e.target.value)}>
+                <MenuItem value=""><em>-- Choose a material --</em></MenuItem>
+                {materials.map((mat) => <MenuItem key={mat.name} value={mat.name}>{mat.name}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth type="number" label="Add Quantity" value={addQuantity} onChange={(e) => setAddQuantity(e.target.value)} variant="outlined" />
+            <Button variant="contained" onClick={handleAdd} startIcon={<AddIcon />} sx={{ mt: 1 }}>Add Stock</Button>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth type="number" label="Set Total Quantity" value={modifyQuantity} onChange={(e) => setModifyQuantity(e.target.value)} variant="outlined" />
+            <Button variant="contained" color="secondary" onClick={handleModify} startIcon={<EditIcon />} sx={{ mt: 1 }}>Modify Total</Button>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      <Paper sx={{ p: 3, mb: 4 }}>
+        <Typography variant="h5" gutterBottom>📦 Current Inventory</Typography>
+        <TableContainer>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell>Material Name</TableCell>
+                <TableCell align="center">Total Quantity (kg/L)</TableCell>
+                <TableCell>Last Updated</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {materials.map((mat) => (
-                <option key={mat.name} value={mat.name}>{mat.name}</option>
+                <TableRow hover key={mat.name}>
+                  <TableCell><strong>{mat.name}</strong></TableCell>
+                  <TableCell align="center">
+                    <Chip label={mat.totalQuantity ?? 0} color={getQuantityChipColor(mat.totalQuantity)} />
+                  </TableCell>
+                  <TableCell>{new Date(mat.updatedAt).toLocaleString()}</TableCell>
+                </TableRow>
               ))}
-            </select>
-          </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
 
-          <div className="action-group">
-            <div className="form-group">
-              <label>Add Quantity</label>
-              <input 
-                type="number" 
-                placeholder="Enter amount to add" 
-                value={addQuantity} 
-                onChange={(e) => setAddQuantity(e.target.value)} 
-              />
-            </div>
-            <button className="btn-add" onClick={handleAdd}>➕ Add Stock</button>
-          </div>
+      <Paper sx={{ p: 3, mb: 4 }}>
+         <ResinCalculator onProduced={fetchMaterials} showProduce={false} />
+      </Paper>
 
-          <div className="action-group">
-            <div className="form-group">
-              <label>Set Total Quantity</label>
-              <input 
-                type="number" 
-                placeholder="Enter new total" 
-                value={modifyQuantity} 
-                onChange={(e) => setModifyQuantity(e.target.value)} 
-              />
-            </div>
-            <button className="btn-modify" onClick={handleModify}>✏️ Modify Total</button>
-          </div>
-        </div>
-      </div>
+      <Fab color="primary" aria-label="add resin config" sx={{ position: 'fixed', bottom: 30, right: 30 }} onClick={() => setShowResinModal(true)}>
+        <AddIcon />
+      </Fab>
 
-      <div className="materials-table-card">
-        <h3>📦 Current Inventory</h3>
-        <div className="table-wrapper">
-          <table className="materials-table">
-            <thead>
-              <tr>
-                <th>Material Name</th>
-                <th>Total Quantity (kg/L)</th>
-                <th>Last Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {materials.map((mat) => (
-                <tr key={mat.name}>
-                  <td><strong>{mat.name}</strong></td>
-                  <td className="quantity-cell">
-                    <span className={`quantity-badge ${mat.totalQuantity < 100 ? 'low' : mat.totalQuantity < 500 ? 'medium' : 'high'}`}>
-                      {mat.totalQuantity ?? 0}
-                    </span>
-                  </td>
-                  <td>{new Date(mat.updatedAt).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Modal open={showResinModal} onClose={handleCloseModal}>
+        <Box sx={modalStyle}>
+          <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Add New Resin Configuration</Typography>
+            <IconButton onClick={handleCloseModal}><CloseIcon /></IconButton>
+          </Box>
+          <Box sx={{ p: 3, overflowY: 'auto' }}>
+            <TextField fullWidth label="Resin Name" value={newResin.name} onChange={(e) => setNewResin({ ...newResin, name: e.target.value })} sx={{ mb: 3 }} />
+            
+            <Typography variant="h6" gutterBottom>Raw Materials & Percentages</Typography>
+            
+            {newResin.rawMaterials.map((rm, index) => (
+              <Grid container spacing={2} key={index} alignItems="center" sx={{ mb: 2 }}>
+                <Grid item xs={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Material</InputLabel>
+                    <Select value={rm.name} label="Material" onChange={(e) => handleRawMaterialChange(index, 'name', e.target.value)}>
+                      {availableRawMaterials.map(mat => <MenuItem key={mat} value={mat}>{mat}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={4}>
+                  <TextField fullWidth type="number" label="Percentage" value={rm.percentage} onChange={(e) => handleRawMaterialChange(index, 'percentage', e.target.value)} InputProps={{ endAdornment: '%' }} />
+                </Grid>
+                <Grid item xs={2}>
+                  <IconButton onClick={() => handleRemoveRawMaterialFromResin(index)} color="error"><DeleteIcon /></IconButton>
+                </Grid>
+              </Grid>
+            ))}
 
-      {/* Resin Calculator with automatic refresh */}
-      <div className="calculator-section">
-        <ResinCalculator onProduced={fetchMaterials} showProduce={false} />
-      </div>
+            <Button onClick={handleAddRawMaterialToResin} startIcon={<AddIcon />} sx={{ mt: 1 }}>Add Material</Button>
 
-      {/* Floating Add Button */}
-      <button 
-        className="floating-add-btn" 
-        onClick={() => setShowResinModal(true)}
-        title="Add New Resin Configuration"
-      >
-        ➕
-      </button>
+            <Box mt={3}>
+              {showAddRawMaterialInput ? (
+                <Grid container spacing={1} alignItems="center">
+                  <Grid item xs>
+                    <TextField fullWidth autoFocus label="New Raw Material Name" value={newRawMaterialName} onChange={(e) => setNewRawMaterialName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddNewRawMaterialToList()} />
+                  </Grid>
+                  <Grid item>
+                    <Button onClick={handleAddNewRawMaterialToList} variant="contained">Save</Button>
+                    <Button onClick={() => setShowAddRawMaterialInput(false)}>Cancel</Button>
+                  </Grid>
+                </Grid>
+              ) : (
+                <Button onClick={() => setShowAddRawMaterialInput(true)}>Add New Raw Material to List</Button>
+              )}
+            </Box>
+            
+            <Typography variant="h6" sx={{ mt: 3 }}>
+              Total: {newResin.rawMaterials.reduce((sum, rm) => sum + (Number(rm.percentage) || 0), 0).toFixed(2)}%
+            </Typography>
 
-      {/* Add Resin Modal */}
-      {showResinModal && (
-        <div className="modal-overlay" onClick={handleCloseModal}>
-          <div className="modal-content resin-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>➕ Add New Resin Configuration</h3>
-              <button className="modal-close-btn" onClick={handleCloseModal}>✕</button>
-            </div>
+          </Box>
+          <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button onClick={handleCloseModal}>Cancel</Button>
+            <Button onClick={handleSaveResin} variant="contained">Save Resin</Button>
+          </Box>
+        </Box>
+      </Modal>
 
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Resin Name <span className="required">*</span></label>
-                <input
-                  type="text"
-                  placeholder="e.g., Epoxy Resin, Alkyd Resin"
-                  value={newResin.name}
-                  onChange={(e) => setNewResin({ ...newResin, name: e.target.value })}
-                  className="resin-name-input"
-                />
-              </div>
-
-              <div className="raw-materials-section">
-                <div className="section-header">
-                  <h4>Raw Materials & Percentages</h4>
-                  <button className="btn-add-material" onClick={handleAddRawMaterial}>
-                    ➕ Add Material
-                  </button>
-                </div>
-
-                {newResin.rawMaterials.length === 0 ? (
-                  <div className="empty-state">
-                    <p>No raw materials added yet. Click "Add Material" to get started.</p>
-                  </div>
-                ) : (
-                  <div className="materials-list">
-                    {newResin.rawMaterials.map((rm, index) => (
-                      <div key={index} className="material-row">
-                        <div className="material-number">{index + 1}</div>
-                        <div className="material-inputs">
-                          <select
-                            value={rm.name}
-                            onChange={(e) => handleRawMaterialChange(index, 'name', e.target.value)}
-                            className="material-select"
-                          >
-                            <option value="">-- Select Material --</option>
-                            {availableRawMaterials.map((mat) => (
-                              <option key={mat} value={mat}>{mat}</option>
-                            ))}
-                          </select>
-                          <div className="percentage-input-group">
-                            <input
-                              type="number"
-                              placeholder="0"
-                              value={rm.percentage}
-                              onChange={(e) => handleRawMaterialChange(index, 'percentage', e.target.value)}
-                              min="0"
-                              max="100"
-                              step="0.1"
-                              className="percentage-input"
-                            />
-                            <span className="percentage-symbol">%</span>
-                          </div>
-                        </div>
-                        <button 
-                          className="btn-remove-material" 
-                          onClick={() => handleRemoveRawMaterial(index)}
-                          title="Remove this material"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Add New Raw Material Input */}
-                {showAddRawMaterialInput ? (
-                  <div className="add-raw-material-section">
-                    <div className="add-raw-material-input-group">
-                      <input
-                        type="text"
-                        placeholder="Enter new raw material name"
-                        value={newRawMaterialName}
-                        onChange={(e) => setNewRawMaterialName(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleAddNewRawMaterial()}
-                        className="new-raw-material-input"
-                        autoFocus
-                      />
-                      <button className="btn-save-raw-material" onClick={handleAddNewRawMaterial}>
-                        ✓ Save
-                      </button>
-                      <button 
-                        className="btn-cancel-raw-material" 
-                        onClick={() => {
-                          setShowAddRawMaterialInput(false);
-                          setNewRawMaterialName("");
-                        }}
-                      >
-                        ✕ Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button 
-                    className="btn-add-new-raw-material" 
-                    onClick={() => setShowAddRawMaterialInput(true)}
-                  >
-                    ➕ Add New Raw Material
-                  </button>
-                )}
-
-                {newResin.rawMaterials.length > 0 && (
-                  <div className="total-percentage">
-                    <strong>Total:</strong>
-                    <span className={`total-value ${Math.abs(newResin.rawMaterials.reduce((sum, rm) => sum + (Number(rm.percentage) || 0), 0) - 100) < 0.01 ? 'valid' : 'invalid'}`}>
-                      {newResin.rawMaterials.reduce((sum, rm) => sum + (Number(rm.percentage) || 0), 0).toFixed(2)}%
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn-cancel" onClick={handleCloseModal}>Cancel</button>
-              <button className="btn-save" onClick={handleSaveResin}>💾 Save Resin</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
 }
-
 
 export default RawMaterials;

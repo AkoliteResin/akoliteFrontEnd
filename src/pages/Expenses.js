@@ -1,22 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import './Expenses.css';
+
+// MUI Components
+import {
+  Container, Box, Typography, Paper, Grid, TextField, Button, Select, MenuItem, FormControl, InputLabel,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  CircularProgress, Alert, Chip, IconButton, Snackbar, Card, CardContent
+} from '@mui/material';
+
+// MUI Icons
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Save as SaveIcon, Cancel as CancelIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+
+// A map for category icons to be used with MUI Chip
+const categoryIcons = {
+  'Office staff': <Typography component="span" sx={{ fontSize: '1.2em' }}>🏢</Typography>,
+  'Helper': <Typography component="span" sx={{ fontSize: '1.2em' }}>🙋</Typography>,
+  'Chemist': <Typography component="span" sx={{ fontSize: '1.2em' }}>🔬</Typography>,
+  'Accountant': <Typography component="span" sx={{ fontSize: '1.2em' }}>📊</Typography>,
+  'Driver': <Typography component="span" sx={{ fontSize: '1.2em' }}>🚚</Typography>,
+  'Car Driver': <Typography component="span" sx={{ fontSize: '1.2em' }}>🚗</Typography>,
+  'Tanker Driver': <Typography component="span" sx={{ fontSize: '1.2em' }}>🚛</Typography>,
+  'Plant Operator': <Typography component="span" sx={{ fontSize: '1.2em' }}>⚙️</Typography>,
+  'Manager': <Typography component="span" sx={{ fontSize: '1.2em' }}>🧑‍💼</Typography>,
+  'Conductor': <Typography component="span" sx={{ fontSize: '1.2em' }}>🎫</Typography>,
+  'Lab': <Typography component="span" sx={{ fontSize: '1.2em' }}>🏷️</Typography>,
+  'Default': <Typography component="span" sx={{ fontSize: '1.2em' }}>💰</Typography>,
+};
+
+const getCategoryIcon = (category) => categoryIcons[category] || categoryIcons['Default'];
 
 function Expenses() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
-  
-  // Get current month and year
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
   const getCurrentMonth = () => {
     const date = new Date();
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   };
-  
-  const allowedCategories = ['Office staff', 'Helper', 'Chemist', 'Accountant', 'Driver', 'Car Driver', 'Tanker Driver', 'Plant Operator', 'Manager', 'Conductor', 'Lab'];
 
-  // Form state - monthly expense entry
+  const allowedCategories = useMemo(() => ['Office staff', 'Helper', 'Chemist', 'Accountant', 'Driver', 'Car Driver', 'Tanker Driver', 'Plant Operator', 'Manager', 'Conductor', 'Lab'], []);
+
   const [formData, setFormData] = useState({
     month: getCurrentMonth().split('-')[1],
     year: getCurrentMonth().split('-')[0],
@@ -25,19 +51,14 @@ function Expenses() {
     monthlyAmount: '',
     description: ''
   });
-  
-  // Edit state
+
   const [editingId, setEditingId] = useState(null);
-  
-  // Filter state
+
   const [filterMonth, setFilterMonth] = useState(getCurrentMonth().split('-')[1]);
   const [filterYear, setFilterYear] = useState(getCurrentMonth().split('-')[0]);
   const [filterCategory, setFilterCategory] = useState('All');
-  
-  // Summary state (per-category)
-  const [summary, setSummary] = useState({ total: 0, count: 0 });
 
-  // Selected date for daily view
+  const [summary, setSummary] = useState({ total: 0, count: 0 });
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
@@ -49,20 +70,12 @@ function Expenses() {
     try {
       setLoading(true);
       setError(null);
-      
-      const params = {
-        month: filterMonth,
-        year: filterYear
-      };
-      
+      const params = { month: filterMonth, year: filterYear };
       const response = await axios.get('http://localhost:5000/api/expenses', { params });
       let data = response.data;
-      
-      // Filter by category on frontend if not 'All'
       if (filterCategory !== 'All') {
         data = data.filter(exp => exp.category === filterCategory);
       }
-      
       setExpenses(data);
       calculateSummary(data);
     } catch (err) {
@@ -79,31 +92,31 @@ function Expenses() {
     data.forEach(exp => {
       const amt = Number(exp.monthlyAmount) || 0;
       const key = exp.category || 'Unknown';
-      if (!sum[key]) sum[key] = 0;
-      sum[key] += amt;
+      if (sum.hasOwnProperty(key)) {
+        sum[key] += amt;
+      }
       sum.total += amt;
     });
     setSummary(sum);
   };
 
-  // Calculate working days in a month (26 days per month = 6 days × ~4.33 weeks)
   const getWorkingDaysInMonth = (month, year) => {
     const daysInMonth = new Date(year, month, 0).getDate();
-    const sundays = Math.floor(daysInMonth / 7);
-    return daysInMonth - sundays; // Total days minus Sundays
+    let sundays = 0;
+    for (let i = 1; i <= daysInMonth; i++) {
+      if (new Date(year, month - 1, i).getDay() === 0) {
+        sundays++;
+      }
+    }
+    return daysInMonth - sundays;
   };
 
-  // Calculate daily expense from monthly
   const getDailyExpense = (monthlyAmount, month, year) => {
     const workingDays = getWorkingDaysInMonth(month, year);
-    return monthlyAmount / workingDays;
+    return workingDays > 0 ? monthlyAmount / workingDays : 0;
   };
 
-  // Check if selected date is a working day (not Sunday)
-  const isWorkingDay = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.getDay() !== 0; // 0 = Sunday
-  };
+  const isWorkingDay = (dateStr) => new Date(dateStr).getDay() !== 0;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -112,47 +125,29 @@ function Expenses() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!formData.month || !formData.year || !formData.category || !formData.monthlyAmount) {
-      alert('Month, year, category, and monthly amount are required');
+      setSnackbar({ open: true, message: 'Month, year, category, and monthly amount are required', severity: 'error' });
       return;
     }
-    
     const amount = Number(formData.monthlyAmount);
     if (isNaN(amount) || amount <= 0) {
-      alert('Monthly amount must be a positive number');
+      setSnackbar({ open: true, message: 'Monthly amount must be a positive number', severity: 'error' });
       return;
     }
-    
     try {
       setSaving(true);
-      
       if (editingId) {
-        // Update existing expense
         await axios.put(`http://localhost:5000/api/expenses/${editingId}`, formData);
-        alert('Monthly expense updated successfully');
+        setSnackbar({ open: true, message: 'Monthly expense updated successfully', severity: 'success' });
       } else {
-        // Add new expense
         await axios.post('http://localhost:5000/api/expenses', formData);
-        alert('Monthly expense added successfully');
+        setSnackbar({ open: true, message: 'Monthly expense added successfully', severity: 'success' });
       }
-      
-      // Reset form
-      setFormData({
-        month: getCurrentMonth().split('-')[1],
-        year: getCurrentMonth().split('-')[0],
-        category: 'Labour',
-        employeeName: '',
-        monthlyAmount: '',
-        description: ''
-      });
-      setEditingId(null);
-      
-      // Refresh list
+      handleCancelEdit(); // Reset form and editing state
       fetchExpenses();
     } catch (err) {
       console.error('Error saving expense:', err);
-      alert(err.response?.data?.message || 'Failed to save expense');
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to save expense', severity: 'error' });
     } finally {
       setSaving(false);
     }
@@ -175,7 +170,7 @@ function Expenses() {
     setFormData({
       month: getCurrentMonth().split('-')[1],
       year: getCurrentMonth().split('-')[0],
-      category: 'Labour',
+      category: 'Office staff',
       employeeName: '',
       monthlyAmount: '',
       description: ''
@@ -184,428 +179,243 @@ function Expenses() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this monthly expense?')) {
-      return;
-    }
-    
+    if (!window.confirm('Are you sure you want to delete this monthly expense?')) return;
     const pass = window.prompt('Enter admin password to confirm deletion:');
-    if (pass == null) return;
     if (pass !== '123@Ako') {
-      alert('Incorrect password. Deletion cancelled.');
+      if (pass !== null) setSnackbar({ open: true, message: 'Incorrect password. Deletion cancelled.', severity: 'error' });
       return;
     }
-    
     try {
       setSaving(true);
-      await axios.delete(`http://localhost:5000/api/expenses/${id}`, {
-        headers: { 'x-admin-pass': pass }
-      });
-      alert('Monthly expense deleted successfully');
+      await axios.delete(`http://localhost:5000/api/expenses/${id}`, { headers: { 'x-admin-pass': pass } });
+      setSnackbar({ open: true, message: 'Monthly expense deleted successfully', severity: 'success' });
       fetchExpenses();
     } catch (err) {
       console.error('Error deleting expense:', err);
-      alert(err.response?.data?.message || 'Failed to delete expense');
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to delete expense', severity: 'error' });
     } finally {
       setSaving(false);
     }
   };
 
-  const getCategoryColor = (category) => {
-    const colors = {
-      'Office staff': '#8e44ad',
-      'Helper': '#95a5a6',
-      'Chemist': '#16a085',
-      'Accountant': '#2980b9',
-      'Driver': '#d35400',
-      'Car Driver': '#c0392b',
-      'Tanker Driver': '#e67e22',
-      'Plant Operator': '#27ae60',
-      'Manager': '#2c3e50',
-      'Conductor': '#f39c12',
-      'Lab': '#7f8c8d'
-    };
-    return colors[category] || '#95a5a6';
-  };
-
-  const getCategoryIcon = (category) => {
-    switch (category) {
-      case 'Office staff': return '🏢';
-      case 'Helper': return '🙋';
-      case 'Chemist': return '🔬';
-      case 'Accountant': return '📊';
-      case 'Driver': return '🚚';
-      case 'Car Driver': return '🚗';
-      case 'Tanker Driver': return '🚛';
-      case 'Plant Operator': return '⚙️';
-      case 'Manager': return '🧑‍💼';
-      case 'Conductor': return '🎫';
-      case 'Lab': return '🏷️';
-      default: return '💰';
-    }
-  };
-
   const getMonthName = (monthNum) => {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                    'July', 'August', 'September', 'October', 'November', 'December'];
-    return months[parseInt(monthNum) - 1] || '';
+    return new Date(2000, monthNum - 1, 1).toLocaleString('default', { month: 'long' });
   };
 
-  // Calculate daily breakdown for selected date
-  const getDailyBreakdown = () => {
-    const selectedDateObj = new Date(selectedDate);
-    const month = selectedDateObj.getMonth() + 1;
-    const year = selectedDateObj.getFullYear();
-    
+  const dailyBreakdown = useMemo(() => {
     if (!isWorkingDay(selectedDate)) {
       return { categories: [], total: 0, isSunday: true };
     }
-    
+    const selectedDateObj = new Date(selectedDate);
+    const month = String(selectedDateObj.getMonth() + 1).padStart(2, '0');
+    const year = String(selectedDateObj.getFullYear());
+
     const dailyExpenses = expenses
-      .filter(exp => exp.month === String(month).padStart(2, '0') && exp.year === String(year))
+      .filter(exp => exp.month === month && exp.year === year)
       .map(exp => ({
         ...exp,
-        dailyAmount: getDailyExpense(exp.monthlyAmount, month, year)
+        dailyAmount: getDailyExpense(exp.monthlyAmount, parseInt(month), parseInt(year))
       }));
-    
     const total = dailyExpenses.reduce((sum, exp) => sum + exp.dailyAmount, 0);
-    
     return { categories: dailyExpenses, total, isSunday: false };
+  }, [selectedDate, expenses]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const workingDays = useMemo(() => getWorkingDaysInMonth(parseInt(filterMonth), parseInt(filterYear)), [filterMonth, filterYear]);
+
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') return;
+    setSnackbar({ ...snackbar, open: false });
   };
 
-  const dailyBreakdown = getDailyBreakdown();
-  const workingDays = getWorkingDaysInMonth(parseInt(filterMonth), parseInt(filterYear));
+  const monthOptions = [
+    { value: '01', label: 'January' }, { value: '02', label: 'February' }, { value: '03', label: 'March' },
+    { value: '04', label: 'April' }, { value: '05', label: 'May' }, { value: '06', label: 'June' },
+    { value: '07', label: 'July' }, { value: '08', label: 'August' }, { value: '09', label: 'September' },
+    { value: '10', label: 'October' }, { value: '11', label: 'November' }, { value: '12', label: 'December' }
+  ];
 
   return (
-    <div className="expenses-container">
-      <h2>💰 Monthly Expenses Management</h2>
-      <p className="subtitle">Enter monthly expenses and view daily breakdown (6 working days/week)</p>
-      
-      {/* Add/Edit Form */}
-      <div className="expense-form-card">
-        <h3>{editingId ? '✏️ Edit Monthly Expense' : '➕ Add Monthly Expense'}</h3>
-        <form onSubmit={handleSubmit} className="expense-form">
-          <div className="form-row">
-            <div className="form-group">
-              <label>Month *</label>
-              <select
-                name="month"
-                value={formData.month}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="01">January</option>
-                <option value="02">February</option>
-                <option value="03">March</option>
-                <option value="04">April</option>
-                <option value="05">May</option>
-                <option value="06">June</option>
-                <option value="07">July</option>
-                <option value="08">August</option>
-                <option value="09">September</option>
-                <option value="10">October</option>
-                <option value="11">November</option>
-                <option value="12">December</option>
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label>Year *</label>
-              <input
-                type="number"
-                name="year"
-                value={formData.year}
-                onChange={handleInputChange}
-                min="2020"
-                max="2099"
-                required
-              />
-            </div>
-            
-            <div className="form-group">
-              <label>Category *</label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleInputChange}
-                required
-              >
-                {allowedCategories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label>Monthly Amount (₹) *</label>
-              <input
-                type="number"
-                name="monthlyAmount"
-                value={formData.monthlyAmount}
-                onChange={handleInputChange}
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-                required
-              />
-            </div>
-          </div>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label>Employee/Labour Name</label>
-              <input
-                type="text"
-                name="employeeName"
-                value={formData.employeeName}
-                onChange={handleInputChange}
-                placeholder="Optional"
-              />
-            </div>
-            
-            <div className="form-group form-group-wide">
-              <label>Description</label>
-              <input
-                type="text"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Optional notes"
-              />
-            </div>
-          </div>
-          
-          <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? '⏳ Saving...' : editingId ? '💾 Update Expense' : '➕ Add Expense'}
-            </button>
-            {editingId && (
-              <button type="button" className="btn btn-secondary" onClick={handleCancelEdit}>
-                ✖️ Cancel
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-      
-      {/* Monthly Summary Cards */}
-      <div className="summary-cards">
-        {allowedCategories.map((d) => (
-          <div key={d} className="summary-card" style={{ borderLeftColor: getCategoryColor(d) }}>
-            <div className="summary-info">
-              <div className="summary-label">{d} (Monthly)</div>
-              <div className="summary-amount">₹{(summary[d] || 0).toFixed(2)}</div>
-              <div className="summary-daily">Daily: ₹{((summary[d] || 0) / workingDays).toFixed(2)}</div>
-            </div>
-          </div>
-        ))}
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+        <span role="img" aria-label="money bag" style={{ marginRight: '10px' }}>💰</span> Monthly Expenses Management
+      </Typography>
+      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+        Enter monthly expenses and view daily breakdown (6 working days/week).
+      </Typography>
 
-        <div className="summary-card summary-card-total">
-          <div className="summary-icon">💰</div>
-          <div className="summary-info">
-            <div className="summary-label">Total (Monthly)</div>
-            <div className="summary-amount">₹{summary.total.toFixed(2)}</div>
-            <div className="summary-daily">Daily: ₹{(summary.total / workingDays).toFixed(2)}</div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Working Days Info */}
-      <div className="working-days-info">
-        <div className="info-badge">
-          📅 {getMonthName(filterMonth)} {filterYear} has <strong>{workingDays} working days</strong> (excluding Sundays)
-        </div>
-      </div>
-      
+      {/* Add/Edit Form */}
+      <Paper sx={{ p: { xs: 2, md: 3 }, mb: 4 }}>
+        <Typography variant="h5" gutterBottom>{editingId ? '✏️ Edit Monthly Expense' : '➕ Add Monthly Expense'}</Typography>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth required>
+                <InputLabel>Month</InputLabel>
+                <Select name="month" value={formData.month} label="Month" onChange={handleInputChange}>
+                  {monthOptions.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField fullWidth required type="number" name="year" value={formData.year} onChange={handleInputChange} label="Year" />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth required>
+                <InputLabel>Category</InputLabel>
+                <Select name="category" value={formData.category} label="Category" onChange={handleInputChange}>
+                  {allowedCategories.map(cat => <MenuItem key={cat} value={cat}>{cat}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField fullWidth required type="number" name="monthlyAmount" value={formData.monthlyAmount} onChange={handleInputChange} label="Monthly Amount (₹)" placeholder="0.00" />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth name="employeeName" value={formData.employeeName} onChange={handleInputChange} label="Employee/Labour Name" placeholder="Optional" />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth name="description" value={formData.description} onChange={handleInputChange} label="Description" placeholder="Optional notes" />
+            </Grid>
+          </Grid>
+          <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+            <Button type="submit" variant="contained" color="primary" startIcon={editingId ? <SaveIcon /> : <AddIcon />} disabled={saving}>
+              {saving ? 'Saving...' : editingId ? 'Update Expense' : 'Add Expense'}
+            </Button>
+            {editingId && (
+              <Button variant="outlined" color="secondary" startIcon={<CancelIcon />} onClick={handleCancelEdit}>
+                Cancel
+              </Button>
+            )}
+          </Box>
+        </Box>
+      </Paper>
+
+      {/* Monthly Summary Cards */}
+      <Typography variant="h5" gutterBottom>Monthly Summary</Typography>
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        {allowedCategories.map((d) => (
+          <Grid item xs={12} sm={6} md={4} lg={2} key={d}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {getCategoryIcon(d)} {d}
+                </Typography>
+                <Typography color="text.secondary">Monthly</Typography>
+                <Typography variant="h5" component="p">₹{(summary[d] || 0).toLocaleString('en-IN')}</Typography>
+                <Typography color="text.secondary">Daily: ₹{((summary[d] || 0) / workingDays).toFixed(2)}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+        <Grid item xs={12} sm={6} md={4} lg={2}>
+            <Card sx={{ backgroundColor: 'primary.main', color: 'white' }}>
+              <CardContent>
+                <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  💰 Total
+                </Typography>
+                <Typography>Monthly</Typography>
+                <Typography variant="h5" component="p">₹{summary.total.toLocaleString('en-IN')}</Typography>
+                <Typography>Daily: ₹{(summary.total / workingDays).toFixed(2)}</Typography>
+              </CardContent>
+            </Card>
+        </Grid>
+      </Grid>
+
       {/* Daily Expense Calculator */}
-      <div className="daily-calculator">
-        <h3>📊 Daily Expense Breakdown</h3>
-        <div className="date-selector">
-          <label>Select Date:</label>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
-        </div>
+      <Paper sx={{ p: { xs: 2, md: 3 }, mb: 4 }}>
+        <Typography variant="h5" gutterBottom>📊 Daily Expense Breakdown</Typography>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          {getMonthName(filterMonth)} {filterYear} has <strong>{workingDays} working days</strong> (excluding Sundays).
+        </Alert>
+        <TextField type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} label="Select Date" InputLabelProps={{ shrink: true }} sx={{ mb: 2 }} />
         
         {dailyBreakdown.isSunday ? (
-          <div className="sunday-notice">
-            🌅 <strong>Sunday - No work day!</strong> No expenses calculated for this day.
-          </div>
+          <Alert severity="warning">🌅 <strong>Sunday - No work day!</strong> No expenses calculated for this day.</Alert>
         ) : (
-          <div className="daily-breakdown-content">
-            <div className="daily-total">
-              <h4>Total Daily Expense for {new Date(selectedDate).toLocaleDateString()}</h4>
-              <div className="total-amount">₹{dailyBreakdown.total.toFixed(2)}</div>
-            </div>
-            
+          <>
+            <Typography variant="h6">Total Daily Expense for {new Date(selectedDate).toLocaleDateString()}: <strong>₹{dailyBreakdown.total.toFixed(2)}</strong></Typography>
             {dailyBreakdown.categories.length > 0 ? (
-              <table className="daily-breakdown-table">
-                <thead>
-                  <tr>
-                    <th>Category</th>
-                    <th>Name</th>
-                    <th>Monthly Amount</th>
-                    <th>Daily Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dailyBreakdown.categories.map((exp, idx) => (
-                    <tr key={idx}>
-                      <td>
-                        <span 
-                          className="category-badge"
-                          style={{ backgroundColor: getCategoryColor(exp.category) }}
-                        >
-                          {exp.category}
-                        </span>
-                      </td>
-                      <td>{exp.employeeName || '—'}</td>
-                      <td>₹{Number(exp.monthlyAmount).toFixed(2)}</td>
-                      <td className="amount-cell">₹{exp.dailyAmount.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="no-data">No expenses recorded for this month</div>
-            )}
-          </div>
+              <TableContainer>
+                <Table stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Category</TableCell>
+                      <TableCell>Name</TableCell>
+                      <TableCell align="right">Monthly Amount</TableCell>
+                      <TableCell align="right">Daily Amount</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {dailyBreakdown.categories.map((exp, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell><Chip label={exp.category} size="small" /></TableCell>
+                        <TableCell>{exp.employeeName || '—'}</TableCell>
+                        <TableCell align="right">₹{Number(exp.monthlyAmount).toFixed(2)}</TableCell>
+                        <TableCell align="right"><strong>₹{exp.dailyAmount.toFixed(2)}</strong></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : <Alert severity="info" sx={{ mt: 2 }}>No expenses recorded for this month.</Alert>}
+          </>
         )}
-      </div>
-      
-      {/* Filters */}
-      <div className="filters-section">
-        <div className="filter-group">
-          <label>📅 Filter by Month:</label>
-          <select
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-          >
-            <option value="01">January</option>
-            <option value="02">February</option>
-            <option value="03">March</option>
-            <option value="04">April</option>
-            <option value="05">May</option>
-            <option value="06">June</option>
-            <option value="07">July</option>
-            <option value="08">August</option>
-            <option value="09">September</option>
-            <option value="10">October</option>
-            <option value="11">November</option>
-            <option value="12">December</option>
-          </select>
-        </div>
-        
-        <div className="filter-group">
-          <label>📆 Year:</label>
-          <input
-            type="number"
-            value={filterYear}
-            onChange={(e) => setFilterYear(e.target.value)}
-            min="2020"
-            max="2099"
-          />
-        </div>
-        
-        <div className="filter-group">
-          <label>🏷️ Filter by Category:</label>
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-          >
-            <option value="All">All Categories</option>
-            {allowedCategories.map(d => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-        </div>
-        
-        <button 
-          className="btn btn-secondary"
-          onClick={() => {
-            const current = getCurrentMonth();
-            setFilterMonth(current.split('-')[1]);
-            setFilterYear(current.split('-')[0]);
-            setFilterCategory('All');
-          }}
-        >
-          🔄 Reset to Current Month
-        </button>
-      </div>
-      
-      {/* Monthly Expenses List */}
-      <div className="expenses-list">
-        <h3>📋 Monthly Expense Records ({expenses.length})</h3>
-        
-        {loading && <div className="loading">Loading expenses...</div>}
-        {error && <div className="error">{error}</div>}
-        
-        {!loading && !error && expenses.length === 0 && (
-          <div className="no-data">
-            <p>No monthly expenses found for the selected filters.</p>
-            <p>Add your first monthly expense using the form above.</p>
-          </div>
-        )}
-        
-        {!loading && !error && expenses.length > 0 && (
-          <div className="expenses-table-wrapper">
-            <table className="expenses-table">
-              <thead>
-                <tr>
-                  <th>Month</th>
-                  <th>Year</th>
-                  <th>Category</th>
-                  <th>Name</th>
-                  <th>Monthly Amount</th>
-                  <th>Daily Amount</th>
-                  <th>Description</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+      </Paper>
+
+      {/* Filters & Main Table */}
+      <Paper sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography variant="h5" gutterBottom>📋 Monthly Expense Records ({expenses.length})</Typography>
+        <Grid container spacing={2} sx={{ mb: 3 }} alignItems="center">
+          <Grid item xs={12} sm={4} md={3}><FormControl fullWidth><InputLabel>Month</InputLabel><Select value={filterMonth} label="Month" onChange={(e) => setFilterMonth(e.target.value)}>{monthOptions.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}</Select></FormControl></Grid>
+          <Grid item xs={12} sm={4} md={3}><TextField fullWidth type="number" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} label="Year" /></Grid>
+          <Grid item xs={12} sm={4} md={3}><FormControl fullWidth><InputLabel>Category</InputLabel><Select value={filterCategory} label="Category" onChange={(e) => setFilterCategory(e.target.value)}><MenuItem value="All">All Categories</MenuItem>{allowedCategories.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}</Select></FormControl></Grid>
+          <Grid item xs={12} sm={12} md={3}><Button fullWidth variant="outlined" startIcon={<RefreshIcon />} onClick={() => { const c = getCurrentMonth(); setFilterMonth(c.split('-')[1]); setFilterYear(c.split('-')[0]); setFilterCategory('All'); }}>Reset Filters</Button></Grid>
+        </Grid>
+
+        {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}><CircularProgress /></Box> :
+         error ? <Alert severity="error">{error}</Alert> :
+         expenses.length === 0 ? <Alert severity="info">No monthly expenses found for the selected filters. Add one using the form above.</Alert> :
+         (
+          <TableContainer>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Month</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell align="right">Monthly Amt.</TableCell>
+                  <TableCell align="right">Daily Amt.</TableCell>
+                  <TableCell>Description</TableCell>
+                  <TableCell align="center">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {expenses.map((expense) => (
-                  <tr key={expense._id}>
-                    <td>{getMonthName(expense.month)}</td>
-                    <td>{expense.year}</td>
-                    <td>
-                      <span 
-                        className="category-badge"
-                        style={{ backgroundColor: getCategoryColor(expense.category) }}
-                      >
-                        {expense.category}
-                      </span>
-                    </td>
-                    <td>{expense.employeeName || '—'}</td>
-                    <td className="amount-cell">₹{Number(expense.monthlyAmount).toFixed(2)}</td>
-                    <td className="daily-amount-cell">
-                      ₹{getDailyExpense(expense.monthlyAmount, parseInt(expense.month), parseInt(expense.year)).toFixed(2)}
-                    </td>
-                    <td>{expense.description || '—'}</td>
-                    <td className="actions-cell">
-                      <button
-                        className="btn-icon btn-edit"
-                        onClick={() => handleEdit(expense)}
-                        title="Edit expense"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        className="btn-icon btn-delete"
-                        onClick={() => handleDelete(expense._id)}
-                        title="Delete expense"
-                      >
-                        🗑️
-                      </button>
-                    </td>
-                  </tr>
+                  <TableRow hover key={expense._id}>
+                    <TableCell>{getMonthName(expense.month)} {expense.year}</TableCell>
+                    <TableCell><Chip label={expense.category} icon={getCategoryIcon(expense.category)} size="small" /></TableCell>
+                    <TableCell>{expense.employeeName || '—'}</TableCell>
+                    <TableCell align="right">₹{Number(expense.monthlyAmount).toLocaleString('en-IN')}</TableCell>
+                    <TableCell align="right">₹{getDailyExpense(expense.monthlyAmount, parseInt(expense.month), parseInt(expense.year)).toFixed(2)}</TableCell>
+                    <TableCell>{expense.description || '—'}</TableCell>
+                    <TableCell align="center">
+                      <IconButton color="primary" onClick={() => handleEdit(expense)}><EditIcon /></IconButton>
+                      <IconButton color="error" onClick={() => handleDelete(expense._id)}><DeleteIcon /></IconButton>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
-      </div>
-    </div>
+      </Paper>
+
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
 }
 
