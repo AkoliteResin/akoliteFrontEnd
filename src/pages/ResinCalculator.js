@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 import { useLocation } from "react-router-dom";
 import "./ResinCalculator.css";
 
@@ -12,27 +12,43 @@ function ResinCalculator({ onProduced, showProduce = true }) {
   const orderId = location.state?.orderId || null;
   const [result, setResult] = useState(null);
   const [resinData, setResinData] = useState([]);
+  const [resinLoading, setResinLoading] = useState(true);
+  const [rawMaterials, setRawMaterials] = useState([]);
   const isLocked = Boolean(orderId); // lock inputs when coming from Orders
   const [producing, setProducing] = useState(false);
   const [alreadyProduced, setAlreadyProduced] = useState(false);
 
 
-  // Fetch resin definitions (or use fallback static data)
+  // Fetch resin definitions from backend (includes old resins + newly saved ones)
   useEffect(() => {
     const fetchResinData = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/resins"); // optional API
-        setResinData(res.data);
-      } catch {
-        setResinData([
-          { name: "Epoxy Resin", raw_materials: [{ name: "Bisphenol-A", ratio: 1 }, { name: "Epichlorohydrin", ratio: 10 }, { name: "NaOH", ratio: 0.2 }] },
-          { name: "Alkyd Resin", raw_materials: [{ name: "Phthalic Anhydride", ratio: 28 }, { name: "Glycerol", ratio: 12 }, { name: "Linseed Oil", ratio: 60 }] },
-          { name: "Acrylic Resin", raw_materials: [{ name: "MMA", ratio: 70 }, { name: "BA", ratio: 25 }, { name: "Styrene", ratio: 5 }, { name: "Initiator", ratio: 1 }] },
-          { name: "Phenolic Resin", raw_materials: [{ name: "Phenol", ratio: 1 }, { name: "Formaldehyde", ratio: 2 }, { name: "Catalyst", ratio: 0.01 }] },
-        ]);
+        setResinLoading(true);
+        const res = await axiosInstance.get("/api/resins");
+        setResinData(res.data || []);
+      } catch (err) {
+        console.error('Failed to fetch resins:', err);
+        // Fallback to empty if fetch fails (user can add new resins via Raw Materials)
+        setResinData([]);
+      } finally {
+        setResinLoading(false);
       }
     };
     fetchResinData();
+  }, []);
+
+  // Fetch raw materials from backend
+  useEffect(() => {
+    const fetchRawMaterials = async () => {
+      try {
+        const res = await axiosInstance.get("/api/raw-materials");
+        setRawMaterials(res.data || []);
+      } catch (err) {
+        console.error('Failed to fetch raw materials:', err);
+        setRawMaterials([]);
+      }
+    };
+    fetchRawMaterials();
   }, []);
 
   // If opened from an order, check if it's already produced and disable Produce
@@ -40,7 +56,7 @@ function ResinCalculator({ onProduced, showProduce = true }) {
     const checkAlreadyProduced = async () => {
       if (!orderId) return;
       try {
-        const res = await axios.get("http://localhost:5000/api/produced-resins");
+        const res = await axiosInstance.get("/api/produced-resins");
         const items = res.data?.items || [];
         const exists = items.some(i => i.fromOrderId && i.fromOrderId === orderId);
         if (exists) setAlreadyProduced(true);
@@ -56,20 +72,24 @@ function ResinCalculator({ onProduced, showProduce = true }) {
   const handleCalculate = () => {
     if (!resinType || !litres) return alert("Please fill all fields.");
 
-
     const resin = resinData.find((r) => r.name === resinType);
     if (!resin) return alert("Invalid resin type");
 
-
     const totalRatio = resin.raw_materials.reduce((sum, r) => sum + r.ratio, 0);
-
 
     const output = resin.raw_materials.map((r) => {
       const percentage = (r.ratio / totalRatio) * 100;
       const volume = (percentage / 100) * litres;
-      return { material: r.name, percentage: percentage.toFixed(2), volume: volume.toFixed(2) };
+      // Find available quantity from raw materials
+      const rawMat = rawMaterials.find(rm => rm.name === r.name);
+      const available = rawMat ? rawMat.totalQuantity : 0;
+      return { 
+        material: r.name, 
+        percentage: percentage.toFixed(2), 
+        volume: volume.toFixed(2),
+        available: available
+      };
     });
-
 
     setResult(output);
   };
@@ -81,7 +101,7 @@ function ResinCalculator({ onProduced, showProduce = true }) {
 
     try {
       setProducing(true);
-      const res = await axios.post("http://localhost:5000/api/produce-resin", {
+      const res = await axiosInstance.post("/api/produce-resin", {
         resinType,
         litres: Number(litres),
         unit,
@@ -100,9 +120,9 @@ function ResinCalculator({ onProduced, showProduce = true }) {
       
       if (orderId) {
         setAlreadyProduced(true); // disable produce for this order
-        alert("✅ Resin produced successfully!\nCheck Produced Resins → Active Orders to proceed/complete/dispatch.");
+        alert("✅ Resin created with PENDING status!\nGo to Production → Production tab to Produce, Complete, and Dispatch.");
       } else {
-        alert("✅ Resin produced successfully!\nCheck Produced Resins → Active Orders.");
+        alert("✅ Resin created with PENDING status!\nGo to Production → Production tab to Produce, Complete, and Dispatch.");
       }
     } catch (err) {
       const errorMsg = err.response?.data?.message || "Error producing resin";
@@ -125,14 +145,19 @@ function ResinCalculator({ onProduced, showProduce = true }) {
         <select
           value={resinType}
           onChange={(e) => setResinType(e.target.value)}
-          disabled={isLocked}
-          title={isLocked ? "Locked for this order" : undefined}
+          disabled={isLocked || resinLoading}
+          title={isLocked ? "Locked for this order" : resinLoading ? "Loading resins..." : undefined}
         >
-          <option value="">Select</option>
+          <option value="">{resinLoading ? "Loading..." : "Select"}</option>
           {resinData.map((r) => (
             <option key={r.name} value={r.name}>{r.name}</option>
           ))}
         </select>
+        {resinData.length === 0 && !resinLoading && (
+          <p style={{ color: 'orange', fontSize: '0.9rem', marginTop: '5px' }}>
+            ⚠️ No resins available. Go to Raw Materials → Add New Resin Configuration.
+          </p>
+        )}
 
         <label>Quantity to Produce ({unit}):</label>
         <input
@@ -174,6 +199,7 @@ function ResinCalculator({ onProduced, showProduce = true }) {
                 <th>Material</th>
                 <th>Percentage (%)</th>
                 <th>{unit.charAt(0).toUpperCase() + unit.slice(1)}</th>
+                <th>Available (Stock)</th>
               </tr>
             </thead>
             <tbody>
@@ -182,6 +208,9 @@ function ResinCalculator({ onProduced, showProduce = true }) {
                   <td>{r.material}</td>
                   <td>{r.percentage}</td>
                   <td>{r.volume}</td>
+                  <td style={{ color: r.available < parseFloat(r.volume) ? 'red' : 'green', fontWeight: 'bold' }}>
+                    {r.available}
+                  </td>
                 </tr>
               ))}
             </tbody>

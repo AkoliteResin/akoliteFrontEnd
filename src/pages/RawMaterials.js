@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 import {
   Container, Typography, Paper, Grid, Select, MenuItem, FormControl, InputLabel, TextField, Button,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Box, Fab, Modal,
@@ -22,7 +22,7 @@ function RawMaterials() {
 
   const fetchMaterials = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/raw-materials");
+      const res = await axiosInstance.get("/api/raw-materials");
       setMaterials(res.data);
       setAvailableRawMaterials(res.data.map(m => m.name));
     } catch (err) {
@@ -38,7 +38,7 @@ function RawMaterials() {
   const handleAdd = async () => {
     if (!selectedMaterial || !addQuantity) return setSnackbar({ open: true, message: 'Please select a material and enter a quantity to add.', severity: 'warning' });
     try {
-      await axios.post("http://localhost:5000/api/raw-materials/add", {
+      await axiosInstance.post("/api/raw-materials/add", {
         name: selectedMaterial,
         quantity: Number(addQuantity),
       });
@@ -54,7 +54,7 @@ function RawMaterials() {
   const handleModify = async () => {
     if (!selectedMaterial || !modifyQuantity) return setSnackbar({ open: true, message: 'Please select a material and enter the new total quantity.', severity: 'warning' });
     try {
-      await axios.put("http://localhost:5000/api/raw-materials/modify", {
+      await axiosInstance.put("/api/raw-materials/modify", {
         name: selectedMaterial,
         newQuantity: Number(modifyQuantity),
       });
@@ -100,9 +100,20 @@ function RawMaterials() {
     const totalPercentage = newResin.rawMaterials.reduce((sum, rm) => sum + Number(rm.percentage), 0);
     if (Math.abs(totalPercentage - 100) > 0.01) return setSnackbar({ open: true, message: `Total percentage must be 100%. Current: ${totalPercentage.toFixed(2)}%`, severity: 'error' });
 
-    console.log("Saving resin configuration:", newResin);
-    setSnackbar({ open: true, message: 'Resin configuration saved! (Backend needed)', severity: 'info' });
-    handleCloseModal();
+    try {
+      const payload = {
+        name: newResin.name.trim(),
+        rawMaterials: newResin.rawMaterials.map(r => ({ name: r.name, percentage: Number(r.percentage) }))
+      };
+      const res = await axiosInstance.post('/api/resins', payload);
+      console.log('Saved resin:', res.data);
+      setSnackbar({ open: true, message: 'Resin configuration saved!', severity: 'success' });
+      handleCloseModal();
+    } catch (err) {
+      console.error('Failed to save resin config:', err);
+      const msg = err.response?.data?.message || 'Failed to save resin configuration';
+      setSnackbar({ open: true, message: msg, severity: 'error' });
+    }
   };
 
   const handleCloseModal = () => {
@@ -112,14 +123,27 @@ function RawMaterials() {
     setNewRawMaterialName("");
   };
 
-  const handleAddNewRawMaterialToList = () => {
+  const handleAddNewRawMaterialToList = async () => {
     if (!newRawMaterialName.trim()) return setSnackbar({ open: true, message: 'Please enter a raw material name.', severity: 'warning' });
     if (availableRawMaterials.includes(newRawMaterialName.trim())) return setSnackbar({ open: true, message: 'This raw material already exists.', severity: 'warning' });
 
-    setAvailableRawMaterials([...availableRawMaterials, newRawMaterialName.trim()]);
-    setNewRawMaterialName("");
-    setShowAddRawMaterialInput(false);
-    setSnackbar({ open: true, message: 'Raw material added to the list!', severity: 'success' });
+    try {
+      // POST to backend to create the raw material with initial quantity 0
+      await axiosInstance.post("/api/raw-materials/add", {
+        name: newRawMaterialName.trim(),
+        quantity: 0
+      });
+      
+      // Refresh the materials list to include the new one
+      await fetchMaterials();
+      setNewRawMaterialName("");
+      setShowAddRawMaterialInput(false);
+      setSnackbar({ open: true, message: 'Raw material added and visible in inventory!', severity: 'success' });
+    } catch (err) {
+      console.error('Failed to add raw material:', err);
+      const msg = err.response?.data?.message || 'Failed to add raw material';
+      setSnackbar({ open: true, message: msg, severity: 'error' });
+    }
   };
 
   const getQuantityChipColor = (quantity) => {

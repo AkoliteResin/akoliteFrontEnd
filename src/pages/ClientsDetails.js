@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
-import "./SellersDetails.css";
+import axiosInstance from "../utils/axiosInstance";
+import "./ClientsDetails.css";
 
 // Indian States and Districts Data
 const statesAndDistricts = {
@@ -42,7 +42,7 @@ const statesAndDistricts = {
   "Puducherry": ["Karaikal", "Mahe", "Puducherry", "Yanam"]
 };
 
-function SellersDetails() {
+function ClientsDetails() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -93,7 +93,7 @@ function SellersDetails() {
   const fetchClients = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/api/clients");
+      const response = await axiosInstance.get("/api/clients");
       setClients(response.data || []);
       setError(null);
     } catch (err) {
@@ -140,8 +140,8 @@ function SellersDetails() {
     setHistoryError(null);
     try {
       const [pr, fo] = await Promise.all([
-        axios.get("http://localhost:5000/api/produced-resins"),
-        axios.get("http://localhost:5000/api/future-orders"),
+        axiosInstance.get("/api/produced-resins"),
+        axiosInstance.get("/api/future-orders"),
       ]);
 
       const name = (client.name || "").toLowerCase();
@@ -197,7 +197,7 @@ function SellersDetails() {
     try {
       if (editingClient) {
         // Update existing client
-        const response = await axios.put(`http://localhost:5000/api/clients/${editingClient._id}`, formData);
+        const response = await axiosInstance.put(`/api/clients/${editingClient._id}`, formData);
         alert("Client updated successfully!");
         
         // Update selectedClient if it was the one being edited
@@ -206,7 +206,7 @@ function SellersDetails() {
         }
       } else {
         // Add new client
-        await axios.post("http://localhost:5000/api/clients", formData);
+        await axiosInstance.post("/api/clients", formData);
         alert("Client added successfully!");
       }
       
@@ -244,7 +244,7 @@ function SellersDetails() {
     }
 
     try {
-      await axios.delete(`http://localhost:5000/api/clients/${id}`, {
+      await axiosInstance.delete(`/api/clients/${id}`, {
         headers: { 'x-admin-pass': pass }
       });
       alert("Client deleted successfully!");
@@ -270,7 +270,7 @@ function SellersDetails() {
 
   return (
     <div className="sellers-container">
-      <h1>👥 Sellers/Clients Management</h1>
+      <h1>👥 Clients Management</h1>
 
       {/* Add/Edit Form */}
       <div className="client-form-card">
@@ -714,4 +714,4 @@ function SellersDetails() {
   );
 }
 
-export default SellersDetails;
+export default ClientsDetails;

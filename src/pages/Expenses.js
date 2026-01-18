@@ -1,122 +1,134 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import axiosInstance from '../utils/axiosInstance';
 
-// MUI Components
-import {
-  Container, Box, Typography, Paper, Grid, TextField, Button, Select, MenuItem, FormControl, InputLabel,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  CircularProgress, Alert, Chip, IconButton, Snackbar, Card, CardContent
-} from '@mui/material';
-
-// MUI Icons
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Save as SaveIcon, Cancel as CancelIcon, Refresh as RefreshIcon } from '@mui/icons-material';
-
-// A map for category icons to be used with MUI Chip
-const categoryIcons = {
-  'Office staff': <Typography component="span" sx={{ fontSize: '1.2em' }}>🏢</Typography>,
-  'Helper': <Typography component="span" sx={{ fontSize: '1.2em' }}>🙋</Typography>,
-  'Chemist': <Typography component="span" sx={{ fontSize: '1.2em' }}>🔬</Typography>,
-  'Accountant': <Typography component="span" sx={{ fontSize: '1.2em' }}>📊</Typography>,
-  'Driver': <Typography component="span" sx={{ fontSize: '1.2em' }}>🚚</Typography>,
-  'Car Driver': <Typography component="span" sx={{ fontSize: '1.2em' }}>🚗</Typography>,
-  'Tanker Driver': <Typography component="span" sx={{ fontSize: '1.2em' }}>🚛</Typography>,
-  'Plant Operator': <Typography component="span" sx={{ fontSize: '1.2em' }}>⚙️</Typography>,
-  'Manager': <Typography component="span" sx={{ fontSize: '1.2em' }}>🧑‍💼</Typography>,
-  'Conductor': <Typography component="span" sx={{ fontSize: '1.2em' }}>🎫</Typography>,
-  'Lab': <Typography component="span" sx={{ fontSize: '1.2em' }}>🏷️</Typography>,
-  'Default': <Typography component="span" sx={{ fontSize: '1.2em' }}>💰</Typography>,
-};
-
-const getCategoryIcon = (category) => categoryIcons[category] || categoryIcons['Default'];
+const Designations = [
+  { name: 'Office staff', icon: '🏢', color: '#3498db' },
+  { name: 'Helper', icon: '🙋', color: '#2ecc71' },
+  { name: 'Chemist', icon: '🔬', color: '#9b59b6' },
+  { name: 'Accountant', icon: '📊', color: '#f39c12' },
+  { name: 'Driver', icon: '🚚', color: '#e74c3c' },
+  { name: 'Car Driver', icon: '🚗', color: '#1abc9c' },
+  { name: 'Tanker Driver', icon: '🚛', color: '#34495e' },
+  { name: 'Plant Operator', icon: '⚙️', color: '#16a085' },
+  { name: 'Manager', icon: '🧑‍💼', color: '#d35400' },
+  { name: 'Conducter', icon: '🎫', color: '#c0392b' },
+  { name: 'Lab', icon: '🏷️', color: '#8e44ad' }
+];
 
 function Expenses() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [overtimeByExpense, setOvertimeByExpense] = useState({});
 
   const getCurrentMonth = () => {
     const date = new Date();
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   };
 
-  const allowedCategories = useMemo(() => ['Office staff', 'Helper', 'Chemist', 'Accountant', 'Driver', 'Car Driver', 'Tanker Driver', 'Plant Operator', 'Manager', 'Conductor', 'Lab'], []);
-
   const [formData, setFormData] = useState({
     month: getCurrentMonth().split('-')[1],
     year: getCurrentMonth().split('-')[0],
-    category: 'Office staff',
+    designation: 'Office staff',
     employeeName: '',
     monthlyAmount: '',
     description: ''
   });
 
   const [editingId, setEditingId] = useState(null);
-
-  const [filterMonth, setFilterMonth] = useState(getCurrentMonth().split('-')[1]);
-  const [filterYear, setFilterYear] = useState(getCurrentMonth().split('-')[0]);
-  const [filterCategory, setFilterCategory] = useState('All');
-
-  const [summary, setSummary] = useState({ total: 0, count: 0 });
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [summary, setSummary] = useState({});
+  const [showOvertimeModal, setShowOvertimeModal] = useState(false);
+  const [showOvertimeInfo, setShowOvertimeInfo] = useState(false);
+  const [selectedOvertimeInfo, setSelectedOvertimeInfo] = useState(null);
+  const [overtimeModalData, setOvertimeModalData] = useState({
+    expenseId: null,
+    designation: '',
+    employeeName: '',
+    date: new Date().toISOString().split('T')[0],
+    hoursWorked: '',
+    overtimePayPerHour: ''
+  });
 
+  // Fetch expenses
   useEffect(() => {
     fetchExpenses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterMonth, filterYear, filterCategory]);
+    fetchOvertimeData();
+  }, [formData.month, formData.year]);
 
   const fetchExpenses = async () => {
     try {
       setLoading(true);
       setError(null);
-      const params = { month: filterMonth, year: filterYear };
-      const response = await axios.get('http://localhost:5000/api/expenses', { params });
-      let data = response.data;
-      if (filterCategory !== 'All') {
-        data = data.filter(exp => exp.category === filterCategory);
-      }
-      setExpenses(data);
-      calculateSummary(data);
+      const params = { month: formData.month, year: formData.year };
+      const response = await axiosInstance.get('/api/expenses', { params });
+      setExpenses(response.data);
+      calculateSummary(response.data);
     } catch (err) {
       console.error('Error fetching expenses:', err);
-      setError(err.response?.data?.message || 'Failed to fetch expenses');
+      setError(err.response?.data?.message || 'Failed to load expenses');
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchOvertimeData = async () => {
+    try {
+      const response = await axiosInstance.get('/api/overtime');
+      const overtimeMap = {};
+      response.data.forEach(ot => {
+        if (ot.expenseId) {
+          if (!overtimeMap[ot.expenseId]) {
+            overtimeMap[ot.expenseId] = 0;
+          }
+          overtimeMap[ot.expenseId] += ot.totalOvertimePay || 0;
+        }
+      });
+      setOvertimeByExpense(overtimeMap);
+    } catch (err) {
+      console.error('Error fetching overtime data:', err);
+    }
+  };
+
   const calculateSummary = (data) => {
-    const sum = { total: 0, count: data.length };
-    allowedCategories.forEach(d => { sum[d] = 0; });
+    const sum = {};
+    Designations.forEach(d => { sum[d.name] = 0; });
+    let total = 0;
     data.forEach(exp => {
       const amt = Number(exp.monthlyAmount) || 0;
-      const key = exp.category || 'Unknown';
-      if (sum.hasOwnProperty(key)) {
-        sum[key] += amt;
+      if (sum.hasOwnProperty(exp.designation)) {
+        sum[exp.designation] += amt;
       }
-      sum.total += amt;
+      total += amt;
     });
+    sum.total = total;
     setSummary(sum);
   };
 
-  const getWorkingDaysInMonth = (month, year) => {
+  const getWorkingDays = (month, year) => {
     const daysInMonth = new Date(year, month, 0).getDate();
     let sundays = 0;
     for (let i = 1; i <= daysInMonth; i++) {
-      if (new Date(year, month - 1, i).getDay() === 0) {
-        sundays++;
-      }
+      if (new Date(year, month - 1, i).getDay() === 0) sundays++;
     }
     return daysInMonth - sundays;
   };
 
-  const getDailyExpense = (monthlyAmount, month, year) => {
-    const workingDays = getWorkingDaysInMonth(month, year);
+  const getDailyAmount = (monthlyAmount) => {
+    const workingDays = getWorkingDays(parseInt(formData.month), parseInt(formData.year));
     return workingDays > 0 ? monthlyAmount / workingDays : 0;
   };
 
-  const isWorkingDay = (dateStr) => new Date(dateStr).getDay() !== 0;
+  const isWorkingDay = (dateStr) => {
+    return new Date(dateStr).getDay() !== 0;
+  };
+
+  const getMonthName = (month) => {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+    return months[parseInt(month) - 1] || '';
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -125,29 +137,32 @@ function Expenses() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.month || !formData.year || !formData.category || !formData.monthlyAmount) {
-      setSnackbar({ open: true, message: 'Month, year, category, and monthly amount are required', severity: 'error' });
+    if (!formData.month || !formData.year || !formData.monthlyAmount || !formData.designation || !formData.employeeName) {
+      alert('Month, year, designation, employee name, and monthly amount are required');
       return;
     }
-    const amount = Number(formData.monthlyAmount);
-    if (isNaN(amount) || amount <= 0) {
-      setSnackbar({ open: true, message: 'Monthly amount must be a positive number', severity: 'error' });
-      return;
-    }
+
     try {
       setSaving(true);
       if (editingId) {
-        await axios.put(`http://localhost:5000/api/expenses/${editingId}`, formData);
-        setSnackbar({ open: true, message: 'Monthly expense updated successfully', severity: 'success' });
+        await axiosInstance.put(`/api/expenses/${editingId}`, formData);
+        alert('Expense updated successfully');
       } else {
-        await axios.post('http://localhost:5000/api/expenses', formData);
-        setSnackbar({ open: true, message: 'Monthly expense added successfully', severity: 'success' });
+        await axiosInstance.post('/api/expenses', formData);
+        alert('Expense added successfully');
       }
-      handleCancelEdit(); // Reset form and editing state
+      setFormData({
+        month: getCurrentMonth().split('-')[1],
+        year: getCurrentMonth().split('-')[0],
+        designation: 'Office staff',
+        employeeName: '',
+        monthlyAmount: '',
+        description: ''
+      });
+      setEditingId(null);
       fetchExpenses();
     } catch (err) {
-      console.error('Error saving expense:', err);
-      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to save expense', severity: 'error' });
+      alert(err.response?.data?.message || 'Error saving expense');
     } finally {
       setSaving(false);
     }
@@ -157,7 +172,7 @@ function Expenses() {
     setFormData({
       month: expense.month,
       year: expense.year,
-      category: expense.category,
+      designation: expense.designation,
       employeeName: expense.employeeName || '',
       monthlyAmount: expense.monthlyAmount,
       description: expense.description || ''
@@ -166,256 +181,486 @@ function Expenses() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleCancelEdit = () => {
-    setFormData({
-      month: getCurrentMonth().split('-')[1],
-      year: getCurrentMonth().split('-')[0],
-      category: 'Office staff',
-      employeeName: '',
-      monthlyAmount: '',
-      description: ''
-    });
-    setEditingId(null);
-  };
-
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this monthly expense?')) return;
-    const pass = window.prompt('Enter admin password to confirm deletion:');
+    if (!window.confirm('Delete this expense?')) return;
+    const pass = window.prompt('Enter admin password:');
     if (pass !== '123@Ako') {
-      if (pass !== null) setSnackbar({ open: true, message: 'Incorrect password. Deletion cancelled.', severity: 'error' });
+      alert('Incorrect password');
       return;
     }
     try {
       setSaving(true);
-      await axios.delete(`http://localhost:5000/api/expenses/${id}`, { headers: { 'x-admin-pass': pass } });
-      setSnackbar({ open: true, message: 'Monthly expense deleted successfully', severity: 'success' });
+      await axiosInstance.delete(`/api/expenses/${id}`, {
+        headers: { 'x-admin-pass': pass }
+      });
+      alert('Expense deleted successfully');
       fetchExpenses();
     } catch (err) {
-      console.error('Error deleting expense:', err);
-      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to delete expense', severity: 'error' });
+      alert('Error deleting expense');
     } finally {
       setSaving(false);
     }
   };
 
-  const getMonthName = (monthNum) => {
-    return new Date(2000, monthNum - 1, 1).toLocaleString('default', { month: 'long' });
+  const handleOvertimeClick = (expense) => {
+    setOvertimeModalData({
+      expenseId: expense._id,
+      designation: expense.designation,
+      employeeName: expense.employeeName || '',
+      date: new Date().toISOString().split('T')[0],
+      hoursWorked: '',
+      overtimePayPerHour: ''
+    });
+    setShowOvertimeModal(true);
   };
 
-  const dailyBreakdown = useMemo(() => {
-    if (!isWorkingDay(selectedDate)) {
-      return { categories: [], total: 0, isSunday: true };
+  const handleShowOvertimeInfo = async (expenseId, employeeName, designation) => {
+    try {
+      const response = await axiosInstance.get('/api/overtime');
+      const overtimeRecords = response.data.filter(ot => ot.expenseId === expenseId);
+      setSelectedOvertimeInfo({
+        expenseId,
+        employeeName,
+        designation,
+        records: overtimeRecords
+      });
+      setShowOvertimeInfo(true);
+    } catch (err) {
+      console.error('Error fetching overtime info:', err);
+      alert('Could not load overtime details');
     }
+  };
+
+  const handleOvertimeSubmit = async (e) => {
+    e.preventDefault();
+    if (!overtimeModalData.hoursWorked || !overtimeModalData.overtimePayPerHour || !overtimeModalData.date) {
+      alert('Hours worked, overtime pay per hour, and date are required');
+      return;
+    }
+
+    const hours = Number(overtimeModalData.hoursWorked);
+    const payPerHour = Number(overtimeModalData.overtimePayPerHour);
+    const totalOvertime = hours * payPerHour;
+
+    try {
+      setSaving(true);
+      await axiosInstance.post('/api/overtime', {
+        expenseId: overtimeModalData.expenseId,
+        date: overtimeModalData.date,
+        designation: overtimeModalData.designation,
+        employeeName: overtimeModalData.employeeName,
+        hoursWorked: hours,
+        overtimePayPerHour: payPerHour,
+        totalOvertimePay: totalOvertime
+      });
+      alert(`Overtime added: ${hours} hours × ₹${payPerHour}/hr = ₹${totalOvertime.toFixed(2)}`);
+      setShowOvertimeModal(false);
+      setOvertimeModalData({
+        expenseId: null,
+        designation: '',
+        employeeName: '',
+        date: new Date().toISOString().split('T')[0],
+        hoursWorked: '',
+        overtimePayPerHour: ''
+      });
+      fetchOvertimeExpenses();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error adding overtime');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fetchOvertimeExpenses = async () => {
+    try {
+      await axiosInstance.get('/api/overtime');
+    } catch (err) {
+      console.error('Error fetching overtime:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchOvertimeExpenses();
+  }, []);
+
+  const getDailyBreakdown = () => {
     const selectedDateObj = new Date(selectedDate);
     const month = String(selectedDateObj.getMonth() + 1).padStart(2, '0');
     const year = String(selectedDateObj.getFullYear());
-
+    
+    if (!isWorkingDay(selectedDate)) {
+      return { categories: [], total: 0, isSunday: true };
+    }
+    
     const dailyExpenses = expenses
       .filter(exp => exp.month === month && exp.year === year)
       .map(exp => ({
         ...exp,
-        dailyAmount: getDailyExpense(exp.monthlyAmount, parseInt(month), parseInt(year))
+        dailyAmount: getDailyAmount(exp.monthlyAmount)
       }));
+    
     const total = dailyExpenses.reduce((sum, exp) => sum + exp.dailyAmount, 0);
     return { categories: dailyExpenses, total, isSunday: false };
-  }, [selectedDate, expenses]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const workingDays = useMemo(() => getWorkingDaysInMonth(parseInt(filterMonth), parseInt(filterYear)), [filterMonth, filterYear]);
-
-  const handleSnackbarClose = (event, reason) => {
-    if (reason === 'clickaway') return;
-    setSnackbar({ ...snackbar, open: false });
   };
 
-  const monthOptions = [
-    { value: '01', label: 'January' }, { value: '02', label: 'February' }, { value: '03', label: 'March' },
-    { value: '04', label: 'April' }, { value: '05', label: 'May' }, { value: '06', label: 'June' },
-    { value: '07', label: 'July' }, { value: '08', label: 'August' }, { value: '09', label: 'September' },
-    { value: '10', label: 'October' }, { value: '11', label: 'November' }, { value: '12', label: 'December' }
-  ];
+  const dailyBreakdown = getDailyBreakdown();
+  const workingDays = getWorkingDays(parseInt(formData.month), parseInt(formData.year));
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-        <span role="img" aria-label="money bag" style={{ marginRight: '10px' }}>💰</span> Monthly Expenses Management
-      </Typography>
-      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        Enter monthly expenses and view daily breakdown (6 working days/week).
-      </Typography>
+    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+      <h2>💰 Monthly Expenses Management</h2>
+      <p>Enter monthly expenses and view daily breakdown by designation</p>
 
       {/* Add/Edit Form */}
-      <Paper sx={{ p: { xs: 2, md: 3 }, mb: 4 }}>
-        <Typography variant="h5" gutterBottom>{editingId ? '✏️ Edit Monthly Expense' : '➕ Add Monthly Expense'}</Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth required>
-                <InputLabel>Month</InputLabel>
-                <Select name="month" value={formData.month} label="Month" onChange={handleInputChange}>
-                  {monthOptions.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <TextField fullWidth required type="number" name="year" value={formData.year} onChange={handleInputChange} label="Year" />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth required>
-                <InputLabel>Category</InputLabel>
-                <Select name="category" value={formData.category} label="Category" onChange={handleInputChange}>
-                  {allowedCategories.map(cat => <MenuItem key={cat} value={cat}>{cat}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <TextField fullWidth required type="number" name="monthlyAmount" value={formData.monthlyAmount} onChange={handleInputChange} label="Monthly Amount (₹)" placeholder="0.00" />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField fullWidth name="employeeName" value={formData.employeeName} onChange={handleInputChange} label="Employee/Labour Name" placeholder="Optional" />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField fullWidth name="description" value={formData.description} onChange={handleInputChange} label="Description" placeholder="Optional notes" />
-            </Grid>
-          </Grid>
-          <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-            <Button type="submit" variant="contained" color="primary" startIcon={editingId ? <SaveIcon /> : <AddIcon />} disabled={saving}>
-              {saving ? 'Saving...' : editingId ? 'Update Expense' : 'Add Expense'}
-            </Button>
+      <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+        <h3>{editingId ? '✏️ Edit Expense' : '➕ Add Expense'}</h3>
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+          <div>
+            <label>Month *</label>
+            <select name="month" value={formData.month} onChange={handleInputChange} style={{ width: '100%', padding: '8px' }}>
+              {Array.from({ length: 12 }, (_, i) => ({
+                value: String(i + 1).padStart(2, '0'),
+                label: getMonthName(String(i + 1).padStart(2, '0'))
+              })).map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label>Year *</label>
+            <input type="number" name="year" value={formData.year} onChange={handleInputChange} min="2020" max="2099" style={{ width: '100%', padding: '8px' }} />
+          </div>
+          <div>
+            <label>Designation *</label>
+            <select name="designation" value={formData.designation} onChange={handleInputChange} style={{ width: '100%', padding: '8px' }}>
+              {Designations.map(d => <option key={d.name} value={d.name}>{d.icon} {d.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label>Monthly Amount (₹) *</label>
+            <input type="number" name="monthlyAmount" value={formData.monthlyAmount} onChange={handleInputChange} placeholder="0.00" step="0.01" min="0" style={{ width: '100%', padding: '8px' }} />
+          </div>
+          <div>
+            <label>Employee Name *</label>
+            <input type="text" name="employeeName" value={formData.employeeName} onChange={handleInputChange} placeholder="Required" style={{ width: '100%', padding: '8px' }} required />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label>Description</label>
+            <input type="text" name="description" value={formData.description} onChange={handleInputChange} placeholder="Optional notes" style={{ width: '100%', padding: '8px' }} />
+          </div>
+          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px' }}>
+            <button type="submit" style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }} disabled={saving}>
+              {saving ? '⏳ Saving...' : editingId ? '💾 Update' : '➕ Add'}
+            </button>
             {editingId && (
-              <Button variant="outlined" color="secondary" startIcon={<CancelIcon />} onClick={handleCancelEdit}>
-                Cancel
-              </Button>
+              <button type="button" onClick={() => { setEditingId(null); setFormData({ month: getCurrentMonth().split('-')[1], year: getCurrentMonth().split('-')[0], designation: 'Office staff', employeeName: '', monthlyAmount: '', description: '' }); }} style={{ padding: '10px 20px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                ✖️ Cancel
+              </button>
             )}
-          </Box>
-        </Box>
-      </Paper>
+          </div>
+        </form>
+      </div>
 
-      {/* Monthly Summary Cards */}
-      <Typography variant="h5" gutterBottom>Monthly Summary</Typography>
-      <Grid container spacing={2} sx={{ mb: 4 }}>
-        {allowedCategories.map((d) => (
-          <Grid item xs={12} sm={6} md={4} lg={2} key={d}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  {getCategoryIcon(d)} {d}
-                </Typography>
-                <Typography color="text.secondary">Monthly</Typography>
-                <Typography variant="h5" component="p">₹{(summary[d] || 0).toLocaleString('en-IN')}</Typography>
-                <Typography color="text.secondary">Daily: ₹{((summary[d] || 0) / workingDays).toFixed(2)}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-        <Grid item xs={12} sm={6} md={4} lg={2}>
-            <Card sx={{ backgroundColor: 'primary.main', color: 'white' }}>
-              <CardContent>
-                <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  💰 Total
-                </Typography>
-                <Typography>Monthly</Typography>
-                <Typography variant="h5" component="p">₹{summary.total.toLocaleString('en-IN')}</Typography>
-                <Typography>Daily: ₹{(summary.total / workingDays).toFixed(2)}</Typography>
-              </CardContent>
-            </Card>
-        </Grid>
-      </Grid>
+      {/* Overtime Modal */}
+      {showOvertimeModal && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          background: 'rgba(0,0,0,0.5)', 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{ 
+            background: 'white', 
+            padding: '30px', 
+            borderRadius: '8px', 
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            <h3>⏰ Add Overtime</h3>
+            <p style={{ color: '#666', marginBottom: '15px' }}>
+              <strong>{overtimeModalData.designation}</strong> - {overtimeModalData.employeeName || 'N/A'}
+            </p>
+            <form onSubmit={handleOvertimeSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div>
+                <label>Date *</label>
+                <input 
+                  type="date" 
+                  value={overtimeModalData.date} 
+                  onChange={(e) => setOvertimeModalData(prev => ({ ...prev, date: e.target.value }))}
+                  style={{ width: '100%', padding: '8px' }}
+                />
+              </div>
+              <div>
+                <label>Hours Worked *</label>
+                <input 
+                  type="number" 
+                  placeholder="e.g., 2" 
+                  min="0.5"
+                  step="0.5"
+                  value={overtimeModalData.hoursWorked}
+                  onChange={(e) => setOvertimeModalData(prev => ({ ...prev, hoursWorked: e.target.value }))}
+                  style={{ width: '100%', padding: '8px' }}
+                />
+              </div>
+              <div>
+                <label>Overtime Pay Per Hour (₹) *</label>
+                <input 
+                  type="number"
+                  placeholder="e.g., 150"
+                  min="0"
+                  step="0.01"
+                  value={overtimeModalData.overtimePayPerHour}
+                  onChange={(e) => setOvertimeModalData(prev => ({ ...prev, overtimePayPerHour: e.target.value }))}
+                  style={{ width: '100%', padding: '8px' }}
+                />
+              </div>
+              {overtimeModalData.hoursWorked && overtimeModalData.overtimePayPerHour && (
+                <div style={{ background: '#e7f3ff', padding: '10px', borderRadius: '4px', textAlign: 'center' }}>
+                  <strong>Total: ₹{(Number(overtimeModalData.hoursWorked) * Number(overtimeModalData.overtimePayPerHour)).toFixed(2)}</strong>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  type="submit" 
+                  style={{ flex: 1, padding: '10px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                  disabled={saving}
+                >
+                  ✅ Add
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setShowOvertimeModal(false)}
+                  style={{ flex: 1, padding: '10px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  ✖️ Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-      {/* Daily Expense Calculator */}
-      <Paper sx={{ p: { xs: 2, md: 3 }, mb: 4 }}>
-        <Typography variant="h5" gutterBottom>📊 Daily Expense Breakdown</Typography>
-        <Alert severity="info" sx={{ mb: 2 }}>
-          {getMonthName(filterMonth)} {filterYear} has <strong>{workingDays} working days</strong> (excluding Sundays).
-        </Alert>
-        <TextField type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} label="Select Date" InputLabelProps={{ shrink: true }} sx={{ mb: 2 }} />
-        
-        {dailyBreakdown.isSunday ? (
-          <Alert severity="warning">🌅 <strong>Sunday - No work day!</strong> No expenses calculated for this day.</Alert>
-        ) : (
-          <>
-            <Typography variant="h6">Total Daily Expense for {new Date(selectedDate).toLocaleDateString()}: <strong>₹{dailyBreakdown.total.toFixed(2)}</strong></Typography>
-            {dailyBreakdown.categories.length > 0 ? (
-              <TableContainer>
-                <Table stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Category</TableCell>
-                      <TableCell>Name</TableCell>
-                      <TableCell align="right">Monthly Amount</TableCell>
-                      <TableCell align="right">Daily Amount</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {dailyBreakdown.categories.map((exp, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell><Chip label={exp.category} size="small" /></TableCell>
-                        <TableCell>{exp.employeeName || '—'}</TableCell>
-                        <TableCell align="right">₹{Number(exp.monthlyAmount).toFixed(2)}</TableCell>
-                        <TableCell align="right"><strong>₹{exp.dailyAmount.toFixed(2)}</strong></TableCell>
-                      </TableRow>
+      {/* Overtime Info Modal */}
+      {showOvertimeInfo && selectedOvertimeInfo && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          background: 'rgba(0,0,0,0.5)', 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{ 
+            background: 'white', 
+            padding: '30px', 
+            borderRadius: '8px', 
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}>
+            <h3>⏰ Overtime Details</h3>
+            <p style={{ color: '#666', marginBottom: '15px' }}>
+              <strong>{selectedOvertimeInfo.designation}</strong> - {selectedOvertimeInfo.employeeName || 'N/A'}
+            </p>
+            
+            {selectedOvertimeInfo.records.length > 0 ? (
+              <div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+                  <thead style={{ background: '#ff9800', color: 'white' }}>
+                    <tr>
+                      <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
+                      <th style={{ padding: '10px', textAlign: 'center' }}>Hours</th>
+                      <th style={{ padding: '10px', textAlign: 'right' }}>Pay/Hr</th>
+                      <th style={{ padding: '10px', textAlign: 'right' }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedOvertimeInfo.records.map((ot, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #dee2e6' }}>
+                        <td style={{ padding: '10px' }}>{ot.date}</td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>{ot.hoursWorked} hrs</td>
+                        <td style={{ padding: '10px', textAlign: 'right' }}>₹{ot.overtimePayPerHour.toFixed(2)}</td>
+                        <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold' }}>₹{ot.totalOvertimePay.toFixed(2)}</td>
+                      </tr>
                     ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : <Alert severity="info" sx={{ mt: 2 }}>No expenses recorded for this month.</Alert>}
-          </>
-        )}
-      </Paper>
+                  </tbody>
+                </table>
+                
+                <div style={{ background: '#e7f3ff', padding: '15px', borderRadius: '8px', textAlign: 'center', marginBottom: '20px' }}>
+                  <strong>Total Overtime Pay: ₹{selectedOvertimeInfo.records.reduce((sum, ot) => sum + ot.totalOvertimePay, 0).toFixed(2)}</strong>
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: '#fff3cd', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+                📝 No overtime records found for this employee.
+              </div>
+            )}
+            
+            <button 
+              onClick={() => setShowOvertimeInfo(false)}
+              style={{ width: '100%', padding: '10px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              ✖️ Close
+            </button>
+          </div>
+        </div>
+      )}
 
-      {/* Filters & Main Table */}
-      <Paper sx={{ p: { xs: 2, md: 3 } }}>
-        <Typography variant="h5" gutterBottom>📋 Monthly Expense Records ({expenses.length})</Typography>
-        <Grid container spacing={2} sx={{ mb: 3 }} alignItems="center">
-          <Grid item xs={12} sm={4} md={3}><FormControl fullWidth><InputLabel>Month</InputLabel><Select value={filterMonth} label="Month" onChange={(e) => setFilterMonth(e.target.value)}>{monthOptions.map(opt => <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>)}</Select></FormControl></Grid>
-          <Grid item xs={12} sm={4} md={3}><TextField fullWidth type="number" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} label="Year" /></Grid>
-          <Grid item xs={12} sm={4} md={3}><FormControl fullWidth><InputLabel>Category</InputLabel><Select value={filterCategory} label="Category" onChange={(e) => setFilterCategory(e.target.value)}><MenuItem value="All">All Categories</MenuItem>{allowedCategories.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}</Select></FormControl></Grid>
-          <Grid item xs={12} sm={12} md={3}><Button fullWidth variant="outlined" startIcon={<RefreshIcon />} onClick={() => { const c = getCurrentMonth(); setFilterMonth(c.split('-')[1]); setFilterYear(c.split('-')[0]); setFilterCategory('All'); }}>Reset Filters</Button></Grid>
-        </Grid>
+      {/* Monthly Summary */}
+      <h3>Monthly Summary - {getMonthName(formData.month)} {formData.year}</h3>
+      <div style={{ background: '#f0f4f8', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '12px' }}>Month</label>
+          <select value={formData.month} onChange={(e) => setFormData(prev => ({ ...prev, month: e.target.value }))} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}>
+            {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
+              <option key={m} value={m}>{getMonthName(m)}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '12px' }}>Year</label>
+          <input type="number" value={formData.year} onChange={(e) => setFormData(prev => ({ ...prev, year: e.target.value }))} min="2020" max="2099" style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '100px' }} />
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', marginBottom: '20px' }}>
+        {Designations.map(d => (
+          <div key={d.name} style={{ background: '#fff', border: `3px solid ${d.color}`, padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
+            <div style={{ fontSize: '24px' }}>{d.icon}</div>
+            <div style={{ fontSize: '12px', color: '#666', fontWeight: 'bold' }}>{d.name}</div>
+            <div style={{ fontSize: '16px', fontWeight: 'bold', marginTop: '5px' }}>₹{(summary[d.name] || 0).toFixed(2)}</div>
+            <div style={{ fontSize: '12px', color: '#999' }}>Daily: ₹{((summary[d.name] || 0) / workingDays).toFixed(2)}</div>
+          </div>
+        ))}
+        <div style={{ background: '#fff', border: '3px solid #000', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
+          <div style={{ fontSize: '24px' }}>💰</div>
+          <div style={{ fontSize: '12px', color: '#666', fontWeight: 'bold' }}>TOTAL</div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold', marginTop: '5px' }}>₹{(summary.total || 0).toFixed(2)}</div>
+          <div style={{ fontSize: '12px', color: '#999' }}>Daily: ₹{((summary.total || 0) / workingDays).toFixed(2)}</div>
+        </div>
+      </div>
 
-        {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}><CircularProgress /></Box> :
-         error ? <Alert severity="error">{error}</Alert> :
-         expenses.length === 0 ? <Alert severity="info">No monthly expenses found for the selected filters. Add one using the form above.</Alert> :
-         (
-          <TableContainer>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Month</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Name</TableCell>
-                  <TableCell align="right">Monthly Amt.</TableCell>
-                  <TableCell align="right">Daily Amt.</TableCell>
-                  <TableCell>Description</TableCell>
-                  <TableCell align="center">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {expenses.map((expense) => (
-                  <TableRow hover key={expense._id}>
-                    <TableCell>{getMonthName(expense.month)} {expense.year}</TableCell>
-                    <TableCell><Chip label={expense.category} icon={getCategoryIcon(expense.category)} size="small" /></TableCell>
-                    <TableCell>{expense.employeeName || '—'}</TableCell>
-                    <TableCell align="right">₹{Number(expense.monthlyAmount).toLocaleString('en-IN')}</TableCell>
-                    <TableCell align="right">₹{getDailyExpense(expense.monthlyAmount, parseInt(expense.month), parseInt(expense.year)).toFixed(2)}</TableCell>
-                    <TableCell>{expense.description || '—'}</TableCell>
-                    <TableCell align="center">
-                      <IconButton color="primary" onClick={() => handleEdit(expense)}><EditIcon /></IconButton>
-                      <IconButton color="error" onClick={() => handleDelete(expense._id)}><DeleteIcon /></IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </Paper>
+      {/* Daily Breakdown */}
+      <h3>Daily Breakdown</h3>
+      <div style={{ marginBottom: '20px' }}>
+        <label>Select Date: </label>
+        <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ padding: '8px' }} />
+      </div>
 
-      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Container>
+      {dailyBreakdown.isSunday ? (
+        <div style={{ background: '#fff3cd', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+          🌅 <strong>Sunday - No work day!</strong> No expenses calculated for this day.
+        </div>
+      ) : (
+        <>
+          {/* Daily Summary by Designation */}
+          <h4>Daily Amounts by Designation</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginBottom: '20px' }}>
+            {Designations.map(d => {
+              const dailyAmt = (summary[d.name] || 0) / workingDays;
+              return (
+                <div key={d.name} style={{ background: '#fff', border: `2px solid ${d.color}`, padding: '12px', borderRadius: '6px', fontSize: '12px' }}>
+                  <div style={{ fontSize: '18px' }}>{d.icon}</div>
+                  <div style={{ fontWeight: 'bold', marginTop: '5px' }}>₹{dailyAmt.toFixed(2)}</div>
+                  <div style={{ fontSize: '11px', color: '#999' }}>{d.name}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Entries for selected date */}
+          <h4>Entries for {new Date(selectedDate).toLocaleDateString()}</h4>
+          {dailyBreakdown.categories.length > 0 ? (
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+              <thead>
+                <tr style={{ background: '#f8f9fa' }}>
+                  <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Designation</th>
+                  <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Employee</th>
+                  <th style={{ padding: '10px', textAlign: 'right', borderBottom: '2px solid #dee2e6' }}>Monthly Amount</th>
+                  <th style={{ padding: '10px', textAlign: 'right', borderBottom: '2px solid #dee2e6' }}>Daily Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailyBreakdown.categories.map((exp, idx) => {
+                  const des = Designations.find(d => d.name === exp.designation) || Designations[0];
+                  return (
+                    <tr key={idx} style={{ borderBottom: '1px solid #dee2e6' }}>
+                      <td style={{ padding: '10px' }}><span style={{ background: des.color, color: 'white', padding: '3px 8px', borderRadius: '3px', fontSize: '12px' }}>{des.icon} {exp.designation}</span></td>
+                      <td style={{ padding: '10px' }}>{exp.employeeName || '—'}</td>
+                      <td style={{ padding: '10px', textAlign: 'right' }}>₹{Number(exp.monthlyAmount).toFixed(2)}</td>
+                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold' }}>₹{exp.dailyAmount.toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
+                <tr style={{ background: '#f8f9fa', fontWeight: 'bold' }}>
+                  <td colSpan="3" style={{ padding: '10px', textAlign: 'right' }}>Total Daily Amount:</td>
+                  <td style={{ padding: '10px', textAlign: 'right' }}>₹{dailyBreakdown.total.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ background: '#e7f3ff', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+              ℹ️ No expenses recorded for this date.
+            </div>
+          )}
+        </>
+      )}
+
+      {/* All Expenses Table */}
+      <h3>All Expenses - {getMonthName(formData.month)} {formData.year}</h3>
+      {loading && <p>Loading...</p>}
+      {error && <div style={{ background: '#f8d7da', padding: '15px', borderRadius: '8px', color: '#721c24' }}>❌ {error}</div>}
+      {!loading && expenses.length === 0 && <p>No expenses found</p>}
+      {!loading && expenses.length > 0 && (
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#f8f9fa' }}>
+              <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Designation</th>
+              <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Employee</th>
+              <th style={{ padding: '10px', textAlign: 'right', borderBottom: '2px solid #dee2e6' }}>Monthly Amt</th>
+              <th style={{ padding: '10px', textAlign: 'right', borderBottom: '2px solid #dee2e6' }}>OT Pay</th>
+              <th style={{ padding: '10px', textAlign: 'right', borderBottom: '2px solid #dee2e6' }}>Total Pay</th>
+              <th style={{ padding: '10px', textAlign: 'right', borderBottom: '2px solid #dee2e6' }}>Daily Amt</th>
+              <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Description</th>
+              <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #dee2e6' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {expenses.map((exp) => {
+              const des = Designations.find(d => d.name === exp.designation) || Designations[0];
+              return (
+                <tr key={exp._id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                  <td style={{ padding: '10px' }}><span style={{ background: des.color, color: 'white', padding: '3px 8px', borderRadius: '3px', fontSize: '12px' }}>{des.icon} {exp.designation}</span></td>
+                  <td style={{ padding: '10px' }}>{exp.employeeName || '—'}</td>
+                  <td style={{ padding: '10px', textAlign: 'right' }}>₹{Number(exp.monthlyAmount).toFixed(2)}</td>
+                  <td style={{ padding: '10px', textAlign: 'right', background: overtimeByExpense[exp._id] ? '#fff3cd' : 'transparent' }}>₹{(overtimeByExpense[exp._id] || 0).toFixed(2)}</td>
+                  <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', background: overtimeByExpense[exp._id] ? '#e7f3ff' : 'transparent' }}>₹{(Number(exp.monthlyAmount) + (overtimeByExpense[exp._id] || 0)).toFixed(2)}</td>
+                  <td style={{ padding: '10px', textAlign: 'right' }}>₹{getDailyAmount(exp.monthlyAmount).toFixed(2)}</td>
+                  <td style={{ padding: '10px' }}>{exp.description || '—'}</td>
+                  <td style={{ padding: '10px', textAlign: 'center' }}>
+                    <button onClick={() => handleShowOvertimeInfo(exp._id, exp.employeeName, exp.designation)} style={{ marginRight: '5px', padding: '5px 10px', background: '#17a2b8', border: 'none', borderRadius: '4px', cursor: 'pointer', color: 'white', fontSize: '12px' }}>ℹ️</button>
+                    <button onClick={() => handleOvertimeClick(exp)} style={{ marginRight: '5px', padding: '5px 10px', background: '#ff9800', border: 'none', borderRadius: '4px', cursor: 'pointer', color: 'white' }}>⏰</button>
+                    <button onClick={() => handleEdit(exp)} style={{ marginRight: '5px', padding: '5px 10px', background: '#ffc107', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>✏️</button>
+                    <button onClick={() => handleDelete(exp._id)} style={{ padding: '5px 10px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🗑️</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+
+    </div>
   );
 }
 

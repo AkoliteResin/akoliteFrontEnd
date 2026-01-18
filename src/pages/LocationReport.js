@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 import "./LocationReport.css";
 
 const LocationReport = () => {
@@ -17,7 +17,7 @@ const LocationReport = () => {
   const fetchLocationReport = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/api/reports/location-orders");
+      const response = await axiosInstance.get("/api/reports/location-orders");
       setLocationData(response.data);
       
       // Extract unique states for filter
