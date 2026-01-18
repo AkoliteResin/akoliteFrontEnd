@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 import "./Billing.css";
 import { printInvoice } from "../utils/printInvoice";
 
@@ -11,15 +11,6 @@ const DEFAULT_RATES = {
   phenolic: 5.23,
 };
 
-function normalizeResinKey(resinType = "") {
-  const t = String(resinType).toLowerCase();
-  if (t.includes("epoxy")) return "epoxy";
-  if (t.includes("alkyd")) return "alkyd";
-  if (t.includes("acrylic")) return "acrylic";
-  if (t.includes("phenolic")) return "phenolic";
-  return t || "other";
-}
-
 export default function Billing() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -27,21 +18,58 @@ export default function Billing() {
   const [orderInput, setOrderInput] = useState("");
   const [orderNumbers, setOrderNumbers] = useState([]); // selected order numbers
   const [rates, setRates] = useState(DEFAULT_RATES);
+  const [allResins, setAllResins] = useState([]); // All resins from backend
   const [transactionPercent, setTransactionPercent] = useState(100);
   const [includeGodown, setIncludeGodown] = useState(false);
   const [clientFilter, setClientFilter] = useState(""); // Client name filter
+
+  // Fetch all resins to initialize rates
+  useEffect(() => {
+    const fetchResins = async () => {
+      try {
+        const res = await axiosInstance.get("/api/resins");
+        const resins = res.data || [];
+        setAllResins(resins);
+        
+        // Initialize rates for all resins
+        const newRates = { ...DEFAULT_RATES };
+        resins.forEach(resin => {
+          if (!newRates[resin.name]) {
+            newRates[resin.name] = 1.0; // Default rate for new resins
+          }
+        });
+        setRates(newRates);
+      } catch (err) {
+        console.error("Failed to fetch resins:", err);
+      }
+    };
+    fetchResins();
+  }, []);
 
   // Fetch deployed items function
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await axios.get("http://localhost:5000/api/produced-resins");
-      // Keep only the actual dispatched records (not the original production record)
-      // Dispatched records have originalProductionId set
-      const items = (res.data?.items || []).filter(
-        (i) => i.status === "deployed" && i.clientName && i.originalProductionId
-      );
+      const res = await axiosInstance.get("/api/dispatched/all");
+      // Convert the grouped resin data into a flat list of items
+      const items = [];
+      if (res.data?.success && res.data?.data) {
+        res.data.data.forEach(resinGroup => {
+          resinGroup.orders.forEach(order => {
+            items.push({
+              _id: order._id,
+              orderNumber: order.orderNumber,
+              clientName: order.clientName,
+              resinType: resinGroup.resinType,
+              litres: order.dispatchedQty,
+              unit: order.unit,
+              deployedAt: order.dispatchTime,
+              status: 'deployed'
+            });
+          });
+        });
+      }
       setProduced(items);
     } catch (err) {
       console.error(err);
@@ -131,7 +159,7 @@ export default function Billing() {
   useEffect(() => {
     const fetchBilled = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/billing');
+        const res = await axiosInstance.get('/api/billing');
         // Flatten all billed order numbers
         const billed = [];
         (res.data || []).forEach(doc => {
@@ -162,16 +190,16 @@ export default function Billing() {
 
   // Build a dynamic set of resin keys to show editable rates for any unknowns
   const dynamicRateKeys = useMemo(() => {
-    const keys = new Set(Object.keys(DEFAULT_RATES));
-    matchedItems.forEach((i) => keys.add(normalizeResinKey(i.resinType)));
-    return Array.from(keys);
-  }, [matchedItems]);
+    const keys = new Set(Object.keys(rates)); // Use all available rates
+    matchedItems.forEach((i) => keys.add(i.resinType)); // Add resin types from matched items
+    return Array.from(keys).sort();
+  }, [matchedItems, rates]);
 
   // Line totals and subtotal
   const lines = useMemo(() => {
     return matchedItems.map((i) => {
-      const key = normalizeResinKey(i.resinType);
-      const rate = rates[key] ?? 0;
+      const key = i.resinType; // Use actual resin name
+      const rate = rates[key] ?? 1.0; // Default to 1.0 if not found
       const qty = Number(i.litres) || 0;
       const lineTotal = qty * rate;
       return { id: i._id, orderNumber: i.orderNumber, date: i.deployedAt, client: i.clientName, resin: i.resinType, unit: i.unit || "litres", qty, rate, lineTotal };
@@ -232,14 +260,16 @@ export default function Billing() {
       const orderSet = Array.from(new Set(lines.map(l => l.orderNumber).filter(Boolean)));
       if (orderSet.length > 0) {
         const qp = encodeURIComponent(orderSet.join(','));
-        const ex = await axios.get(`http://localhost:5000/api/billing/by-orders?orders=${qp}`);
+        const ex = await axiosInstance.get(`/api/billing/by-orders?orders=${qp}`);
         const existingOrders = new Set();
         (ex.data || []).forEach(doc => {
           (doc.items || []).forEach(it => existingOrders.add(it.orderNumber));
         });
         const dups = orderSet.filter(o => existingOrders.has(o));
         if (dups.length > 0) {
-          alert(`These orders are already billed: ${dups.join(', ')}`);
+          alert(`⚠️ Billing is already done for these order(s): ${dups.join(', ')}\n\nRedirecting to Billing History...`);
+          // Redirect to billing history
+          window.location.href = '/billing-history';
           return;
         }
       }
@@ -279,7 +309,7 @@ export default function Billing() {
     };
 
     try {
-      await axios.post('http://localhost:5000/api/billing/done', { items, totals }, {
+      await axiosInstance.post('/api/billing/done', { items, totals }, {
         headers: { 'x-admin-pass': pass }
       });
       alert('✅ Billing recorded successfully!\n\nYou can view this in Billing History.');

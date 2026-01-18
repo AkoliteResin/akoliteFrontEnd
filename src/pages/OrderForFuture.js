@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import "./OrderForFuture.css";
 
@@ -31,7 +31,7 @@ function OrderForFuture() {
 
   const fetchResinTypes = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/resins");
+      const response = await axiosInstance.get("/api/resins");
       setResinTypes(response.data);
     } catch (err) {
       console.error("Error fetching resin types:", err);
@@ -41,7 +41,7 @@ function OrderForFuture() {
 
   const fetchClients = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/clients');
+      const res = await axiosInstance.get('/api/clients');
       const list = Array.isArray(res.data) ? [...res.data] : [];
       // Ensure default Godown exists in dropdown
       if (!list.some(c => (c.name || '').toLowerCase() === 'godown')) {
@@ -55,7 +55,7 @@ function OrderForFuture() {
 
   const fetchOrders = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/future-orders");
+      const response = await axiosInstance.get("/api/future-orders");
       setOrders(response.data);
     } catch (err) {
       console.error("Error fetching orders:", err);
@@ -103,7 +103,7 @@ function OrderForFuture() {
       return;
     }
     try {
-      await axios.post("http://localhost:5000/api/future-orders", newOrder);
+      await axiosInstance.post("/api/future-orders", newOrder);
       setNewOrder({
         clientName: "",
         resinType: "",

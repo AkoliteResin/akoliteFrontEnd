@@ -43,7 +43,7 @@
 
 .form-card h3 {
   margin: 0 0 25px 0;
-  color: #34495e;
+  color: #030c15;
   font-size: 1.5em;
   border-bottom: 3px solid #3498db;
   padding-bottom: 10px;
@@ -56,7 +56,7 @@
 .form-group label {
   display: block;
   font-weight: 600;
-  color: #2c3e50;
+  color: #000000 !important;
   margin-bottom: 8px;
   font-size: 0.95em;
 }
@@ -76,11 +76,22 @@
 .form-group select {
   width: 100%;
   padding: 12px 15px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid #2e0707;
   border-radius: 8px;
   font-size: 16px;
   transition: all 0.3s ease;
   box-sizing: border-box;
+  color: #1f1f1f;
+}
+
+.form-group select option {
+  color: #1f1f1f;
+  background-color: #ffffff;
+  padding: 10px;
+}
+
+.form-group select option:hover {
+  background-color: #e3f2fd;
 }
 
 .form-group input:focus,
@@ -148,7 +159,7 @@
 .client-option {
   padding: 12px 15px;
   cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #b94c4c;
   transition: all 0.2s ease;
   display: flex;
   justify-content: space-between;
@@ -174,7 +185,7 @@
 
 .no-results {
   padding: 15px;
-  color: #7f8c8d;
+  color: #070d0d;
   font-style: italic;
   text-align: center;
 }
@@ -226,7 +237,7 @@
 
 .order-details p {
   margin: 8px 0;
-  color: #555;
+  color: #131010;
   font-size: 0.95em;
 }
 
@@ -250,7 +261,7 @@
 }
 
 .status-badge.batched {
-  background: #cce5ff;
+  background: #0b1723;
   color: #004085;
 }
 
@@ -289,7 +300,7 @@
 }
 
 .produce-button:disabled {
-  background: #95a5a6;
+  background: #141c1c;
   cursor: not-allowed;
   transform: none;
 }
@@ -297,7 +308,7 @@
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #7f8c8d;
+  color: #030a0b;
   font-size: 1.2em;
 }
 

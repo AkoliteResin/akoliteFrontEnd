@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 
 function formatYMD(d) {
   const pad = (n) => String(n).padStart(2, '0');
@@ -29,7 +29,7 @@ export default function DaySummary() {
       setBillingError(null);
       let deployedForDay = [];
       try {
-        const res = await axios.get("http://localhost:5000/api/produced-resins");
+        const res = await axiosInstance.get("/api/produced-resins");
         const all = res.data?.items || [];
         const day = selectedDate;
         
@@ -92,7 +92,7 @@ export default function DaySummary() {
           .filter(Boolean)));
         if (orders.length > 0) {
           const qp = encodeURIComponent(orders.join(','));
-          const bill = await axios.get(`http://localhost:5000/api/billing/by-orders?orders=${qp}`);
+          const bill = await axiosInstance.get(`/api/billing/by-orders?orders=${qp}`);
           setBillingDocs(bill.data || []);
         } else {
           setBillingDocs([]);

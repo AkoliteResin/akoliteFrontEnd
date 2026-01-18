@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 import "./ProducedResins.css";
 
 function ProducedResins() {
@@ -44,7 +44,7 @@ function ProducedResins() {
       setError(null);
       console.log("Fetching produced resins...");
       
-      const response = await axios.get("http://localhost:5000/api/produced-resins");
+      const response = await axiosInstance.get("/api/produced-resins");
       console.log("API Response:", response.data);
       
       if (response.data && response.data.items) {
@@ -75,8 +75,8 @@ function ProducedResins() {
       setCapLoading(true);
       // Get resin list and current settings
       const [resinsRes, settingsRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/resins'),
-        axios.get('http://localhost:5000/api/batch-settings')
+        axiosInstance.get('/api/resins'),
+        axiosInstance.get('/api/batch-settings')
       ]);
       const resinNames = Array.isArray(resinsRes.data) ? resinsRes.data.map(r => r.name) : [];
       const settings = Array.isArray(settingsRes.data) ? settingsRes.data : [];
@@ -111,7 +111,7 @@ function ProducedResins() {
         }
       }
       for (const [resinType, cap] of entries) {
-        await axios.put(`http://localhost:5000/api/batch-settings/${encodeURIComponent(resinType)}`, { capacity: Number(cap) });
+        await axiosInstance.put(`/api/batch-settings/${encodeURIComponent(resinType)}`, { capacity: Number(cap) });
       }
       alert('Batch capacities saved');
     } catch (err) {
@@ -130,7 +130,7 @@ function ProducedResins() {
     if (!window.confirm(`Generate batches for ${batchDate} using per-resin capacities? This will rebuild pending batches for that date.`)) return;
     try {
       setProcessing(true);
-      const res = await axios.post('http://localhost:5000/api/batches/generate', {
+      const res = await axiosInstance.post('/api/batches/generate', {
         scheduledDate: batchDate
       });
       const count = Array.isArray(res.data?.batches) ? res.data.batches.length : 0;
@@ -151,7 +151,7 @@ function ProducedResins() {
     try {
       setProcessing(true);
       try {
-        await axios.post(`http://localhost:5000/api/produced-resins/${id}/proceed`);
+        await axiosInstance.post(`/api/produced-resins/${id}/proceed`);
         await fetchProducedResins();
         return;
       } catch (err) {
@@ -179,7 +179,7 @@ function ProducedResins() {
     try {
       setProcessing(true);
       try {
-        await axios.post(`http://localhost:5000/api/produced-resins/${id}/complete`);
+        await axiosInstance.post(`/api/produced-resins/${id}/complete`);
         await fetchProducedResins();
         return;
       } catch (err) {
@@ -219,7 +219,7 @@ function ProducedResins() {
       if (!window.confirm(`Dispatch entire batch ${production.batchNumber} to all clients now?`)) return;
       try {
         setProcessing(true);
-        await axios.post(`http://localhost:5000/api/batches/${id}/dispatch`);
+        await axiosInstance.post(`/api/batches/${id}/dispatch`);
         await fetchProducedResins();
         setFilter('archived');
         alert('Batch dispatched to all clients');
@@ -261,7 +261,7 @@ function ProducedResins() {
 
     try {
       setProcessing(true);
-      await axios.post(`http://localhost:5000/api/produced-resins/${id}/deploy`, {
+      await axiosInstance.post(`/api/produced-resins/${id}/deploy`, {
         dispatchQuantity: dispatchQty
       });
       await fetchProducedResins();
@@ -281,7 +281,7 @@ function ProducedResins() {
     
     try {
       setProcessing(true);
-      await axios.post(`http://localhost:5000/api/batches/${batchId}/dispatch-allocation`, {
+      await axiosInstance.post(`/api/batches/${batchId}/dispatch-allocation`, {
         allocationIndex: allocation.clientSeq - 1
       });
       await fetchProducedResins();
@@ -306,7 +306,7 @@ function ProducedResins() {
     }
     try {
       setProcessing(true);
-      await axios.delete(`http://localhost:5000/api/produced-resins/${id}`, {
+      await axiosInstance.delete(`/api/produced-resins/${id}`, {
         headers: { 'x-admin-pass': pass }
       });
       alert("Production deleted successfully");
@@ -902,8 +902,11 @@ function ProducedResins() {
                                 {item.clientName && (
                                   <span className="order-client">{item.clientName}</span>
                                 )}
+                                {item.fromOrderId && (
+                                  <span className="timeline-order">Order ID: {item.fromOrderId}</span>
+                                )}
                                 {item.orderNumber && (
-                                  <span className="timeline-order">Order: #{item.orderNumber}</span>
+                                  <span className="timeline-order">Order #: {item.orderNumber}</span>
                                 )}
                                 <span 
                                   className="timeline-badge"
