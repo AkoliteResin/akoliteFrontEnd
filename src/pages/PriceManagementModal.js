@@ -17,7 +17,6 @@ import {
   Box,
   Typography,
 } from '@mui/material';
-import axiosInstance from '../utils/axiosInstance';
 
 const PriceManagementModal = ({ open, onClose, seller, rawMaterials, onSave }) => {
   const [prices, setPrices] = useState(
