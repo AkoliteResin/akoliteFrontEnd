@@ -49,7 +49,10 @@
             var a = v.split('=');
             q[decodeURIComponent(a[0])] = a.slice(1).join('=').replace(/~and~/g, '&');
           });
-          sessionStorage.redirect = l.protocol + '//' + l.host + '/akoliteFrontEnd' + (q.p || '') + (q.q ? ('?' + q.q) : '') + l.hash;
+          // Redirect to the actual path (p parameter already contains just the path, not the basename)
+          if (q.p) {
+            sessionStorage.redirect = l.protocol + '//' + l.host + '/akoliteFrontEnd' + decodeURIComponent(q.p) + (q.q ? ('?' + q.q) : '') + l.hash;
+          }
         }
       })();
     </script>

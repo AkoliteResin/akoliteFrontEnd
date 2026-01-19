@@ -5,19 +5,15 @@
     <title>Akolite</title>
     <script type="text/javascript">
       // Single Page Apps for GitHub Pages
-      // https://github.com/rafgraph/spa-github-pages
-      var pathSegmentsToKeep = 1;
-
       var l = window.location;
+      // Extract the path after /akoliteFrontEnd/
+      var path = l.pathname.replace(/\/akoliteFrontEnd\/?/, '') || '/';
+      
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
         '/akoliteFrontEnd/index.html?p=' +
-        l.pathname.slice(0, l.pathname.lastIndexOf('/') + 1).slice(0, -1)
-          .split('/')
-          .slice(-pathSegmentsToKeep)
-          .join('/') +
-        '&q=' +
-        l.search.slice(1).replace(/&/g, '~and~') +
+        encodeURIComponent(path) +
+        (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
         l.hash
       );
     </script>
