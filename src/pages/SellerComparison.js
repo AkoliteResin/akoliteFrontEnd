@@ -20,7 +20,6 @@ import {
 } from '@mui/material';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import axiosInstance from '../utils/axiosInstance';
 
 const SellerComparison = () => {
   const [materialPrices, setMaterialPrices] = useState([]);

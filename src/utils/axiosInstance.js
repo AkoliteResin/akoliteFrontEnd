@@ -1,11 +1,16 @@
 import axios from 'axios';
 
 // Single point for backend URL configuration
-const BACKEND_URL = 'http://13.60.97.186:5000';
+// Use HTTPS for production (required for GitHub Pages)
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://dj4haaiis0la7.cloudfront.net/';
 
 // Create an axios instance with authorization header
 const axiosInstance = axios.create({
   baseURL: BACKEND_URL,
+  // Allow self-signed certificates in development
+  httpsAgent: {
+    rejectUnauthorized: false,
+  },
 });
 
 // Add token to every request
