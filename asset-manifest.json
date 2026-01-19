@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/akoliteFrontEnd/static/css/main.7a833074.css",
-    "main.js": "/akoliteFrontEnd/static/js/main.d7a57c8b.js",
+    "main.js": "/akoliteFrontEnd/static/js/main.e77c2200.js",
     "static/js/453.d7446e4a.chunk.js": "/akoliteFrontEnd/static/js/453.d7446e4a.chunk.js",
     "index.html": "/akoliteFrontEnd/index.html",
     "main.7a833074.css.map": "/akoliteFrontEnd/static/css/main.7a833074.css.map",
-    "main.d7a57c8b.js.map": "/akoliteFrontEnd/static/js/main.d7a57c8b.js.map",
+    "main.e77c2200.js.map": "/akoliteFrontEnd/static/js/main.e77c2200.js.map",
     "453.d7446e4a.chunk.js.map": "/akoliteFrontEnd/static/js/453.d7446e4a.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.7a833074.css",
-    "static/js/main.d7a57c8b.js"
+    "static/js/main.e77c2200.js"
   ]
 }
