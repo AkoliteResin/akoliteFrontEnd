@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Install dependencies with npm ci for better caching and speed
-RUN npm ci --omit=optional && npm cache clean --force
+# Install dependencies
+RUN npm install && npm cache clean --force
 
 # Copy source code
 COPY . .
