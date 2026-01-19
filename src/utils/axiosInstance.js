@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create an axios instance with authorization header
 const axiosInstance = axios.create({
-  baseURL: 'http://13.51.175.66:5000',
+  baseURL: 'http://13.60.97.186:5000',
 });
 
 // Add token to every request

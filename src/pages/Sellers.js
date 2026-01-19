@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import axiosInstance from "../utils/axiosInstance";
 import { Box, Tabs, Tab } from "@mui/material";
 import SellerComparison from "./SellerComparison";
