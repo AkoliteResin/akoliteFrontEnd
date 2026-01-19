@@ -6,14 +6,14 @@ WORKDIR /app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies with npm ci for better caching and speed
+RUN npm ci --omit=optional && npm cache clean --force
 
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application with memory optimization for low-memory environments
+RUN NODE_OPTIONS=--max_old_space_size=256 npm run build
 
 # Production stage
 FROM node:20-alpine
