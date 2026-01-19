@@ -40,19 +40,22 @@
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
     <script type="text/javascript">
-      // Restore path from query parameter if redirected from 404.html
+      // Handle GitHub Pages SPA routing
       (function() {
-        var l = window.location;
-        if (l.search[0] === '?') {
-          var q = {};
-          l.search.slice(1).split('&').forEach(function(v) {
-            var a = v.split('=');
-            q[decodeURIComponent(a[0])] = a.slice(1).join('=').replace(/~and~/g, '&');
-          });
-          // Redirect to the actual path (p parameter already contains just the path, not the basename)
-          if (q.p) {
-            sessionStorage.redirect = l.protocol + '//' + l.host + '/akoliteFrontEnd' + decodeURIComponent(q.p) + (q.q ? ('?' + q.q) : '') + l.hash;
+        var params = new URLSearchParams(window.location.search);
+        var redirect = params.get('redirect');
+        var query = params.get('query');
+        
+        if (redirect) {
+          // Build the target URL
+          var targetUrl = window.location.pathname.replace('/index.html', '') + redirect;
+          if (query) {
+            targetUrl += '?' + query;
           }
+          // Store and redirect
+          sessionStorage.redirect = targetUrl;
+          // Clear the query string and redirect
+          window.history.replaceState(null, null, window.location.pathname);
         }
       })();
     </script>

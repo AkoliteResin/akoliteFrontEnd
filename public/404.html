@@ -4,18 +4,32 @@
     <meta charset="utf-8">
     <title>Akolite</title>
     <script type="text/javascript">
-      // Single Page Apps for GitHub Pages
-      var l = window.location;
-      // Extract the path after /akoliteFrontEnd/
-      var path = l.pathname.replace(/\/akoliteFrontEnd\/?/, '') || '/';
+      // Extract the requested path (everything after /akoliteFrontEnd)
+      var pathname = window.location.pathname;
+      var baseUrl = '/akoliteFrontEnd';
+      var requestedPath = pathname;
       
-      l.replace(
-        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        '/akoliteFrontEnd/index.html?p=' +
-        encodeURIComponent(path) +
-        (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-        l.hash
-      );
+      // Remove the base URL from pathname if it exists
+      if (pathname.startsWith(baseUrl + '/')) {
+        requestedPath = pathname.slice(baseUrl.length);
+      } else if (pathname === baseUrl || pathname === baseUrl + '/') {
+        requestedPath = '/';
+      }
+      
+      // Ensure path starts with /
+      if (!requestedPath.startsWith('/')) {
+        requestedPath = '/' + requestedPath;
+      }
+      
+      // Redirect to index.html with the path as a query parameter
+      var url = window.location.protocol + '//' + window.location.host + baseUrl + '/index.html?redirect=' + encodeURIComponent(requestedPath);
+      if (window.location.search) {
+        url += '&query=' + encodeURIComponent(window.location.search.slice(1));
+      }
+      if (window.location.hash) {
+        url += window.location.hash;
+      }
+      window.location.replace(url);
     </script>
   </head>
   <body>
