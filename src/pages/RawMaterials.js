@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import axiosInstance from "../utils/axiosInstance";
+import axiosInstance, { API_ENDPOINTS } from "../utils/axiosInstance";
 import {
   Container, Typography, Paper, Grid, Select, MenuItem, FormControl, InputLabel, TextField, Button,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Box, Fab, Modal,
@@ -23,7 +23,7 @@ function RawMaterials() {
 
   const fetchMaterials = async () => {
     try {
-      const res = await axiosInstance.get("/api/raw-materials");
+      const res = await axiosInstance.get(API_ENDPOINTS.RAW_MATERIALS.GET_ALL);
       setMaterials(res.data);
       setAvailableRawMaterials(res.data.map(m => m.name));
     } catch (err) {
@@ -55,7 +55,7 @@ function RawMaterials() {
   const handleModify = async () => {
     if (!selectedMaterial || !modifyQuantity) return setSnackbar({ open: true, message: 'Please select a material and enter the new total quantity.', severity: 'warning' });
     try {
-      await axiosInstance.put("/api/raw-materials/modify", {
+      await axiosInstance.put(API_ENDPOINTS.RAW_MATERIALS.MODIFY, {
         name: selectedMaterial,
         newQuantity: Number(modifyQuantity),
       });
@@ -106,7 +106,7 @@ function RawMaterials() {
         name: newResin.name.trim(),
         rawMaterials: newResin.rawMaterials.map(r => ({ name: r.name, percentage: Number(r.percentage) }))
       };
-      const res = await axiosInstance.post('/api/resins', payload);
+      const res = await axiosInstance.post(API_ENDPOINTS.RESINS.CREATE, payload);
       console.log('Saved resin:', res.data);
       setSnackbar({ open: true, message: 'Resin configuration saved!', severity: 'success' });
       handleCloseModal();
@@ -130,7 +130,7 @@ function RawMaterials() {
 
     try {
       // POST to backend to create the raw material with initial quantity 0
-      await axiosInstance.post("/api/raw-materials/add", {
+      await axiosInstance.post(API_ENDPOINTS.RAW_MATERIALS.ADD, {
         name: newRawMaterialName.trim(),
         quantity: 0
       });

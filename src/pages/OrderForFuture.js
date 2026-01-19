@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../utils/axiosInstance";
+import axiosInstance, { API_ENDPOINTS } from "../utils/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import "./OrderForFuture.css";
 
@@ -31,7 +31,7 @@ function OrderForFuture() {
 
   const fetchResinTypes = async () => {
     try {
-      const response = await axiosInstance.get("/api/resins");
+      const response = await axiosInstance.get(API_ENDPOINTS.RESINS.GET_ALL);
       setResinTypes(response.data);
     } catch (err) {
       console.error("Error fetching resin types:", err);
@@ -41,7 +41,7 @@ function OrderForFuture() {
 
   const fetchClients = async () => {
     try {
-      const res = await axiosInstance.get('/api/clients');
+      const res = await axiosInstance.get(API_ENDPOINTS.CLIENTS.GET_ALL);
       const list = Array.isArray(res.data) ? [...res.data] : [];
       // Ensure default Godown exists in dropdown
       if (!list.some(c => (c.name || '').toLowerCase() === 'godown')) {

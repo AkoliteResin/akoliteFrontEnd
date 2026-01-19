@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axiosInstance from "../utils/axiosInstance";
+import axiosInstance, { API_ENDPOINTS } from "../utils/axiosInstance";
 import "./Billing.css";
 import { printInvoice } from "../utils/printInvoice";
 
@@ -27,7 +27,7 @@ export default function Billing() {
   useEffect(() => {
     const fetchResins = async () => {
       try {
-        const res = await axiosInstance.get("/api/resins");
+        const res = await axiosInstance.get(API_ENDPOINTS.RESINS.GET_ALL);
         const resins = res.data || [];
         setAllResins(resins);
         
@@ -159,7 +159,7 @@ export default function Billing() {
   useEffect(() => {
     const fetchBilled = async () => {
       try {
-        const res = await axiosInstance.get('/api/billing');
+        const res = await axiosInstance.get(API_ENDPOINTS.BILLING.GET_ALL);
         // Flatten all billed order numbers
         const billed = [];
         (res.data || []).forEach(doc => {
