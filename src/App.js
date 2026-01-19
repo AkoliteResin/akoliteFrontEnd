@@ -146,7 +146,7 @@ function App() {
 
   if (!isAuthenticated) {
     return (
-      <Router>
+      <Router basename="/akoliteFrontEnd">
         <Routes>
           <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
           <Route path="/signup" element={<Signup onLoginSuccess={handleLoginSuccess} />} />
@@ -158,7 +158,7 @@ function App() {
   }
 
   return (
-    <Router>
+    <Router basename="/akoliteFrontEnd">
       <Routes>
         <Route element={<Layout onLogout={handleLogout} user={user} />}>
           <Route path="/" element={<HomePage />} />
