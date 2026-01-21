@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/akoliteFrontEnd/static/css/main.4f62eb44.css",
-    "main.js": "/akoliteFrontEnd/static/js/main.e77c2200.js",
-    "static/js/453.d7446e4a.chunk.js": "/akoliteFrontEnd/static/js/453.d7446e4a.chunk.js",
-    "index.html": "/akoliteFrontEnd/index.html",
-    "main.4f62eb44.css.map": "/akoliteFrontEnd/static/css/main.4f62eb44.css.map",
-    "main.e77c2200.js.map": "/akoliteFrontEnd/static/js/main.e77c2200.js.map",
-    "453.d7446e4a.chunk.js.map": "/akoliteFrontEnd/static/js/453.d7446e4a.chunk.js.map"
+    "main.css": "/static/css/main.4f62eb44.css",
+    "main.js": "/static/js/main.652c3f42.js",
+    "static/js/453.d7446e4a.chunk.js": "/static/js/453.d7446e4a.chunk.js",
+    "index.html": "/index.html",
+    "main.4f62eb44.css.map": "/static/css/main.4f62eb44.css.map",
+    "main.652c3f42.js.map": "/static/js/main.652c3f42.js.map",
+    "453.d7446e4a.chunk.js.map": "/static/js/453.d7446e4a.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.4f62eb44.css",
-    "static/js/main.e77c2200.js"
+    "static/js/main.652c3f42.js"
   ]
 }
