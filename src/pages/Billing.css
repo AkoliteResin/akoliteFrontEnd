@@ -6,6 +6,127 @@
   min-height: 100vh;
 }
 
+@media (max-width: 900px) {
+  .billing-container {
+    padding: 10px;
+    min-width: 0;
+  }
+  .billing-header-section {
+    padding: 16px 8px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+  .billing-header-section h2 {
+    font-size: 22px;
+  }
+  .billing-header-section .subtitle {
+    font-size: 13px;
+  }
+  .billing-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .panel {
+    border-radius: 10px;
+    padding: 0;
+  }
+  .panel-header {
+    padding: 12px 10px;
+    font-size: 16px;
+  }
+  .filter-section, .order-inputs, .rates-section {
+    padding: 12px 10px;
+  }
+  .selected-orders, .suggestions {
+    padding: 10px 10px;
+  }
+  .rates-grid {
+    gap: 8px;
+  }
+  .rate-row {
+    padding: 8px 8px;
+    font-size: 13px;
+  }
+  .invoice {
+    padding: 8px !important;
+  }
+  .invoice-table th, .invoice-table td {
+    padding: 6px;
+    font-size: 12px;
+  }
+  .split {
+    padding: 10px;
+    margin-top: 12px;
+  }
+  .split-row {
+    font-size: 13px;
+    padding: 6px 0;
+  }
+  .split-row.grand {
+    font-size: 16px;
+    padding-top: 10px;
+  }
+  .actions {
+    padding: 0 10px 10px 10px;
+    gap: 6px;
+  }
+  .actions button {
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 7px;
+  }
+}
+
+@media (max-width: 500px) {
+  .billing-header-section h2 {
+    font-size: 16px;
+  }
+  .panel-header h3 {
+    font-size: 15px;
+  }
+  .invoice-table th, .invoice-table td {
+    font-size: 10px;
+    padding: 3px;
+  }
+  .split-row, .split-row.grand {
+    font-size: 11px;
+  }
+  .actions button {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+}
+
+/* Print improvements for phone */
+@media print {
+  .billing-container {
+    background: white;
+    padding: 0;
+    min-width: 0;
+  }
+  .billing-grid { grid-template-columns: 1fr; }
+  .order-inputs, .suggestions, .selected-orders, .rates-grid, .actions, .filter-section { display: none !important; }
+  .panel { box-shadow: none; border-radius: 0; }
+  .panel-header { display: none; }
+  .invoice-panel {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .invoice {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .invoice-table th, .invoice-table td {
+    font-size: 11px;
+    padding: 2px 4px;
+  }
+  .split, .split-row, .split-row.grand {
+    font-size: 11px;
+    padding: 2px 0;
+    margin: 0;
+  }
+}
+
 .billing-header-section {
   background: white;
   padding: 24px 30px;
@@ -40,6 +161,20 @@
   display: grid;
   grid-template-columns: 1fr 1.5fr;
   gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .billing-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .billing-grid .panel {
+    order: 1;
+  }
+  .billing-grid .invoice-panel {
+    order: 2;
+  }
 }
 
 .panel {
@@ -300,9 +435,44 @@
   font-weight: 600;
 }
 
+
 .rates-grid {
   display: grid;
   gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .rates-grid {
+    gap: 8px;
+  }
+  .rate-row {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px 6px;
+    gap: 4px;
+  }
+  .rate-row label {
+    margin-bottom: 2px;
+    font-size: 13px;
+    text-align: left;
+  }
+  .rate-input-group {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 6px 4px;
+    gap: 4px;
+    font-size: 13px;
+  }
+  .rate-input-group input {
+    width: 100%;
+    min-width: 0;
+    font-size: 13px;
+    padding: 4px 6px;
+  }
+  .rate-input-group .currency,
+  .rate-input-group .unit {
+    font-size: 13px;
+  }
 }
 
 .rate-row {
