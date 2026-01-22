@@ -2,14 +2,19 @@ import axios from 'axios';
 
 // Single point for backend URL configuration
 // Use HTTPS for production (required for GitHub Pages)
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://dj4haaiis0la7.cloudfront.net/';
+// Development: http://localhost:5000
+// Production: https://dj4haaiis0la7.cloudfront.net
+const BACKEND_URL = process.env.NODE_ENV === 'production'
+  ? (process.env.REACT_APP_BACKEND_URL || 'https://dj4haaiis0la7.cloudfront.net')
+  : (process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000');
 
 // Create an axios instance with authorization header
 const axiosInstance = axios.create({
   baseURL: BACKEND_URL,
+  withCredentials: true,
   // Allow self-signed certificates in development
   httpsAgent: {
-    rejectUnauthorized: false,
+    rejectUnauthorized: process.env.NODE_ENV === 'production',
   },
 });
 
