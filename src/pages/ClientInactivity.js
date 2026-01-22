@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../utils/axiosInstance";
+import axiosInstance, { API_ENDPOINTS } from "../utils/axiosInstance";
 import {
   Box,
   Container,

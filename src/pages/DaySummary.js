@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axiosInstance from "../utils/axiosInstance";
+import axiosInstance, { API_ENDPOINTS } from "../utils/axiosInstance";
 
 function formatYMD(d) {
   const pad = (n) => String(n).padStart(2, '0');

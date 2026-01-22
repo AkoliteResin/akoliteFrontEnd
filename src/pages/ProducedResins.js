@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../utils/axiosInstance";
+import axiosInstance, { API_ENDPOINTS } from "../utils/axiosInstance";
 import "./ProducedResins.css";
 
 function ProducedResins() {
@@ -75,7 +75,7 @@ function ProducedResins() {
       setCapLoading(true);
       // Get resin list and current settings
       const [resinsRes, settingsRes] = await Promise.all([
-        axiosInstance.get('/api/resins'),
+        axiosInstance.get(API_ENDPOINTS.RESINS.GET_ALL),
         axiosInstance.get('/api/batch-settings')
       ]);
       const resinNames = Array.isArray(resinsRes.data) ? resinsRes.data.map(r => r.name) : [];

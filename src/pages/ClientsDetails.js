@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../utils/axiosInstance";
+import axiosInstance, { API_ENDPOINTS } from "../utils/axiosInstance";
 import "./ClientsDetails.css";
 
 // Indian States and Districts Data
@@ -93,7 +93,7 @@ function ClientsDetails() {
   const fetchClients = async () => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get("/api/clients");
+      const response = await axiosInstance.get(API_ENDPOINTS.CLIENTS.GET_ALL);
       setClients(response.data || []);
       setError(null);
     } catch (err) {
@@ -197,7 +197,7 @@ function ClientsDetails() {
     try {
       if (editingClient) {
         // Update existing client
-        const response = await axiosInstance.put(`/api/clients/${editingClient._id}`, formData);
+        const response = await axiosInstance.put(API_ENDPOINTS.CLIENTS.UPDATE.replace(':id', editingClient._id), formData);
         alert("Client updated successfully!");
         
         // Update selectedClient if it was the one being edited
@@ -206,7 +206,7 @@ function ClientsDetails() {
         }
       } else {
         // Add new client
-        await axiosInstance.post("/api/clients", formData);
+        await axiosInstance.post(API_ENDPOINTS.CLIENTS.CREATE, formData);
         alert("Client added successfully!");
       }
       
@@ -244,7 +244,7 @@ function ClientsDetails() {
     }
 
     try {
-      await axiosInstance.delete(`/api/clients/${id}`, {
+      await axiosInstance.delete(API_ENDPOINTS.CLIENTS.DELETE.replace(':id', id), {
         headers: { 'x-admin-pass': pass }
       });
       alert("Client deleted successfully!");

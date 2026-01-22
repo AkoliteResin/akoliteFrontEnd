@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axiosInstance, { API_ENDPOINTS } from '../utils/axiosInstance';
 import {
   Container,
   Grid,
@@ -19,7 +20,6 @@ import {
 } from '@mui/material';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import axiosInstance from '../utils/axiosInstance';
 
 const SellerComparison = () => {
   const [materialPrices, setMaterialPrices] = useState([]);

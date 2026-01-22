@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import axiosInstance from "../utils/axiosInstance";
+import axiosInstance, { API_ENDPOINTS } from "../utils/axiosInstance";
 import "./BillingHistory.css";
 import { printInvoice } from "../utils/printInvoice";
 
@@ -28,7 +28,7 @@ export default function BillingHistory() {
     try {
       setLoading(true);
       setError(null);
-      const res = await axiosInstance.get("/api/billing");
+      const res = await axiosInstance.get(API_ENDPOINTS.BILLING.GET_ALL);
       setBillingDocs(res.data || []);
     } catch (err) {
       console.error(err);
@@ -107,7 +107,7 @@ export default function BillingHistory() {
 
     try {
       setDeleting(true);
-      await axiosInstance.delete(`/api/billing/${doc._id}`, {
+      await axiosInstance.delete(API_ENDPOINTS.BILLING.GET_ALL + `/${doc._id}`, {
         headers: { 'x-admin-pass': pass }
       });
       alert('Billing record deleted successfully.');

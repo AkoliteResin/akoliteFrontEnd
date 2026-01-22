@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosInstance from '../utils/axiosInstance';
+import axiosInstance, { API_ENDPOINTS } from '../utils/axiosInstance';
 import {
   Container,
   Paper,
@@ -45,11 +45,11 @@ const ClientPayments = () => {
     try {
       setLoading(true);
       // Fetch orders
-      const ordersResponse = await axiosInstance.get('/api/orders');
+      const ordersResponse = await axiosInstance.get(API_ENDPOINTS.ORDERS.GET_ALL);
       const ordersData = ordersResponse.data;
 
       // Fetch clients
-      const clientsResponse = await axiosInstance.get('/api/clients');
+      const clientsResponse = await axiosInstance.get(API_ENDPOINTS.CLIENTS.GET_ALL);
       const clientsData = clientsResponse.data;
 
       setData({

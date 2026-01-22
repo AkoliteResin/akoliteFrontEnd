@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axiosInstance, { API_ENDPOINTS } from '../utils/axiosInstance';
 import {
   Dialog,
   DialogTitle,
@@ -16,7 +17,6 @@ import {
   Box,
   Typography,
 } from '@mui/material';
-import axiosInstance from '../utils/axiosInstance';
 
 const PriceManagementModal = ({ open, onClose, seller, rawMaterials, onSave }) => {
   const [prices, setPrices] = useState(

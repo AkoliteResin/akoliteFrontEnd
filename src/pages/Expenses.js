@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axiosInstance from '../utils/axiosInstance';
+import axiosInstance, { API_ENDPOINTS } from '../utils/axiosInstance';
 
 const Designations = [
   { name: 'Office staff', icon: '🏢', color: '#3498db' },
@@ -62,7 +62,7 @@ function Expenses() {
       setLoading(true);
       setError(null);
       const params = { month: formData.month, year: formData.year };
-      const response = await axiosInstance.get('/api/expenses', { params });
+      const response = await axiosInstance.get(API_ENDPOINTS.EXPENSES.GET_ALL, { params });
       setExpenses(response.data);
       calculateSummary(response.data);
     } catch (err) {
@@ -75,7 +75,7 @@ function Expenses() {
 
   const fetchOvertimeData = async () => {
     try {
-      const response = await axiosInstance.get('/api/overtime');
+      const response = await axiosInstance.get(API_ENDPOINTS.OVERTIME.GET_ALL);
       const overtimeMap = {};
       response.data.forEach(ot => {
         if (ot.expenseId) {
@@ -145,10 +145,10 @@ function Expenses() {
     try {
       setSaving(true);
       if (editingId) {
-        await axiosInstance.put(`/api/expenses/${editingId}`, formData);
+        await axiosInstance.put(API_ENDPOINTS.EXPENSES.UPDATE.replace(':id', editingId), formData);
         alert('Expense updated successfully');
       } else {
-        await axiosInstance.post('/api/expenses', formData);
+        await axiosInstance.post(API_ENDPOINTS.EXPENSES.CREATE, formData);
         alert('Expense added successfully');
       }
       setFormData({
@@ -190,7 +190,7 @@ function Expenses() {
     }
     try {
       setSaving(true);
-      await axiosInstance.delete(`/api/expenses/${id}`, {
+      await axiosInstance.delete(API_ENDPOINTS.EXPENSES.DELETE.replace(':id', id), {
         headers: { 'x-admin-pass': pass }
       });
       alert('Expense deleted successfully');
@@ -216,7 +216,7 @@ function Expenses() {
 
   const handleShowOvertimeInfo = async (expenseId, employeeName, designation) => {
     try {
-      const response = await axiosInstance.get('/api/overtime');
+      const response = await axiosInstance.get(API_ENDPOINTS.OVERTIME.GET_ALL);
       const overtimeRecords = response.data.filter(ot => ot.expenseId === expenseId);
       setSelectedOvertimeInfo({
         expenseId,
@@ -244,7 +244,7 @@ function Expenses() {
 
     try {
       setSaving(true);
-      await axiosInstance.post('/api/overtime', {
+      await axiosInstance.post(API_ENDPOINTS.OVERTIME.CREATE, {
         expenseId: overtimeModalData.expenseId,
         date: overtimeModalData.date,
         designation: overtimeModalData.designation,
@@ -273,7 +273,7 @@ function Expenses() {
 
   const fetchOvertimeExpenses = async () => {
     try {
-      await axiosInstance.get('/api/overtime');
+      await axiosInstance.get(API_ENDPOINTS.OVERTIME.GET_ALL);
     } catch (err) {
       console.error('Error fetching overtime:', err);
     }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import axiosInstance, { API_ENDPOINTS } from '../utils/axiosInstance';
 import {
   Container,
   Box,
@@ -30,18 +31,12 @@ const Login = ({ onLoginSuccess }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      const response = await axiosInstance.post(API_ENDPOINTS.AUTH.LOGIN, {
+        email,
+        password,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || 'Login failed');
-        return;
-      }
+      const data = response.data;
 
       // Store token in localStorage
       localStorage.setItem('token', data.token);
@@ -53,7 +48,7 @@ const Login = ({ onLoginSuccess }) => {
       // Redirect to dashboard
       navigate('/');
     } catch (err) {
-      setError('Error connecting to server');
+      setError(err.response?.data?.message || 'Login failed');
       console.error(err);
     } finally {
       setLoading(false);

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import axiosInstance, { API_ENDPOINTS } from '../utils/axiosInstance';
 import {
   Container,
   Box,
@@ -48,23 +49,20 @@ const Signup = ({ onLoginSuccess }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role }),
+      const response = await axiosInstance.post(API_ENDPOINTS.AUTH.SIGNUP, {
+        name,
+        email,
+        password,
+        role,
       });
 
-      const data = await response.json();
+      const data = response.data;
 
-      if (!response.ok) {
-        setError(data.message || 'Signup failed');
-        return;
-      }
 
       // Redirect to OTP verification page
       navigate('/verify-otp', { state: { email } });
     } catch (err) {
-      setError('Error connecting to server');
+      setError(err.response?.data?.message || 'Error connecting to server');
       console.error(err);
     } finally {
       setLoading(false);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../utils/axiosInstance";
+import axios from "axios";
+import axiosInstance, { API_ENDPOINTS } from "../utils/axiosInstance";
 import { Box, Tabs, Tab } from "@mui/material";
 import SellerComparison from "./SellerComparison";
 import PriceManagementModal from "./PriceManagementModal";
@@ -78,7 +79,7 @@ function Sellers() {
 
   const fetchRawMaterials = async () => {
     try {
-      const response = await axiosInstance.get("/api/raw-materials");
+      const response = await axiosInstance.get(API_ENDPOINTS.RAW_MATERIALS.GET_ALL);
       setRawMaterials(response.data || []);
     } catch (err) {
       console.error("Error fetching raw materials:", err);
@@ -88,7 +89,7 @@ function Sellers() {
   const fetchSellers = async () => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get("/api/sellers");
+      const response = await axiosInstance.get(API_ENDPOINTS.SELLERS.GET_ALL);
       setSellers(response.data || []);
       setError(null);
     } catch (err) {
@@ -141,12 +142,12 @@ function Sellers() {
     try {
       if (editingSeller) {
         await axiosInstance.put(
-          `/api/sellers/${editingSeller._id}`,
+          API_ENDPOINTS.SELLERS.UPDATE.replace(':id', editingSeller._id),
           formData
         );
         setEditingSeller(null);
       } else {
-        await axiosInstance.post("/api/sellers", formData);
+        await axiosInstance.post(API_ENDPOINTS.SELLERS.CREATE, formData);
       }
       fetchSellers();
       resetForm();
@@ -192,7 +193,7 @@ function Sellers() {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this seller?")) {
       try {
-        await axiosInstance.delete(`/api/sellers/${id}`);
+        await axiosInstance.delete(API_ENDPOINTS.SELLERS.DELETE.replace(':id', id));
         fetchSellers();
         if (selectedSeller?._id === id) {
           setSelectedSeller(null);

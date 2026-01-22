@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../utils/axiosInstance";
+import axiosInstance, { API_ENDPOINTS } from "../utils/axiosInstance";
 import { useLocation } from "react-router-dom";
 import "./ResinCalculator.css";
 
@@ -24,7 +24,7 @@ function ResinCalculator({ onProduced, showProduce = true }) {
     const fetchResinData = async () => {
       try {
         setResinLoading(true);
-        const res = await axiosInstance.get("/api/resins");
+        const res = await axiosInstance.get(API_ENDPOINTS.RESINS.GET_ALL);
         setResinData(res.data || []);
       } catch (err) {
         console.error('Failed to fetch resins:', err);
@@ -41,7 +41,7 @@ function ResinCalculator({ onProduced, showProduce = true }) {
   useEffect(() => {
     const fetchRawMaterials = async () => {
       try {
-        const res = await axiosInstance.get("/api/raw-materials");
+        const res = await axiosInstance.get(API_ENDPOINTS.RAW_MATERIALS.GET_ALL);
         setRawMaterials(res.data || []);
       } catch (err) {
         console.error('Failed to fetch raw materials:', err);
