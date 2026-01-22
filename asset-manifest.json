@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/akoliteFrontEnd/static/css/main.4f62eb44.css",
-    "main.js": "/akoliteFrontEnd/static/js/main.99ee7b63.js",
-    "static/js/453.d7446e4a.chunk.js": "/akoliteFrontEnd/static/js/453.d7446e4a.chunk.js",
-    "index.html": "/akoliteFrontEnd/index.html",
-    "main.4f62eb44.css.map": "/akoliteFrontEnd/static/css/main.4f62eb44.css.map",
-    "main.99ee7b63.js.map": "/akoliteFrontEnd/static/js/main.99ee7b63.js.map",
-    "453.d7446e4a.chunk.js.map": "/akoliteFrontEnd/static/js/453.d7446e4a.chunk.js.map"
+    "main.css": "/Draftakolite/static/css/main.4f62eb44.css",
+    "main.js": "/Draftakolite/static/js/main.5533f418.js",
+    "static/js/453.d7446e4a.chunk.js": "/Draftakolite/static/js/453.d7446e4a.chunk.js",
+    "index.html": "/Draftakolite/index.html",
+    "main.4f62eb44.css.map": "/Draftakolite/static/css/main.4f62eb44.css.map",
+    "main.5533f418.js.map": "/Draftakolite/static/js/main.5533f418.js.map",
+    "453.d7446e4a.chunk.js.map": "/Draftakolite/static/js/453.d7446e4a.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.4f62eb44.css",
-    "static/js/main.99ee7b63.js"
+    "static/js/main.5533f418.js"
   ]
 }
